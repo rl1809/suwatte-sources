@@ -1,9 +1,10 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.STTPackage = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SEARCH_SORTERS = exports.DEFAULT_FILTERS = exports.STATUSES = exports.HOME_PAGE_SECTIONS = exports.COMIC_TYPES = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.PREF_KEYS = exports.LOAD_MANGA_BY_CATEGORY = exports.LOAD_MANGA_CREATED = exports.LOAD_MANGA_BY_TRANSLATE_TEAM = exports.LOAD_MANGA_BY_AUTHOR = exports.LOAD_LIST_MANGA = exports.BLOGTRUYEN_DOMAIN = void 0;
+exports.SEARCH_SORTERS = exports.DEFAULT_FILTERS = exports.STATUSES = exports.HOME_PAGE_SECTIONS = exports.DOMAIN_OPTIONS = exports.COMIC_TYPES = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.PREF_KEYS = exports.LOAD_MANGA_BY_CATEGORY = exports.LOAD_MANGA_CREATED = exports.LOAD_MANGA_BY_TRANSLATE_TEAM = exports.LOAD_MANGA_BY_AUTHOR = exports.LOAD_LIST_MANGA = exports.BLOGTRUYENMOI_DOMAIN = exports.BLOGTRUYEN_DOMAIN = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
-exports.BLOGTRUYEN_DOMAIN = "https://blogtruyenmoi.com";
+exports.BLOGTRUYEN_DOMAIN = "https://blogtruyen.vn";
+exports.BLOGTRUYENMOI_DOMAIN = "https://blogtruyenmoi.com";
 exports.LOAD_LIST_MANGA = "/ajax/Search/AjaxLoadListManga";
 exports.LOAD_MANGA_BY_AUTHOR = "/ajax/Author/AjaxLoadMangaByAuthor";
 exports.LOAD_MANGA_BY_TRANSLATE_TEAM = "/ajax/TranslateTeam/AjaxLoadMangaByTranslateTeam";
@@ -21,6 +22,16 @@ exports.STATUS_KEYS = {
 };
 exports.VERTICAL_TYPES = ["Manhwa", "Manhua", "Tu chân - tu tiên", "Webtoon"];
 exports.COMIC_TYPES = ["VnComic"];
+exports.DOMAIN_OPTIONS = [
+    {
+        title: exports.BLOGTRUYEN_DOMAIN,
+        id: exports.BLOGTRUYEN_DOMAIN,
+    },
+    {
+        title: exports.BLOGTRUYENMOI_DOMAIN,
+        id: exports.BLOGTRUYENMOI_DOMAIN,
+    },
+];
 exports.HOME_PAGE_SECTIONS = [
     {
         id: "trending",
@@ -29,12 +40,12 @@ exports.HOME_PAGE_SECTIONS = [
     },
     {
         id: "top-hot",
-        title: "Hot",
+        title: "Truyện hot",
         style: daisuke_1.SectionStyle.GALLERY,
     },
     {
         id: "top-week",
-        title: "Top Week",
+        title: "Top lượt xem tuần",
         style: daisuke_1.SectionStyle.NAVIGATION_LIST,
     },
     {
@@ -276,7 +287,7 @@ class Controller {
     }
     async preload(chapterData) {
         const domain = await store_1.GlobalStore.getDomain();
-        const pages = chapterData.pages?.slice(32) || [];
+        const pages = chapterData.pages || [];
         for (const page of pages) {
             if (page.url != null) {
                 void this.client.get(page.url, { headers: { Referer: domain + "/" } });
@@ -541,7 +552,7 @@ class Target {
         this.info = {
             id: "blogtruyen",
             website: constants_1.BLOGTRUYEN_DOMAIN,
-            version: 1.1,
+            version: 1.2,
             name: "BlogTruyen",
             supportedLanguages: ["vi-vn"],
             thumbnail: "blogtruyen.png",
@@ -612,9 +623,10 @@ class Target {
                 {
                     header: "BlogTruyen Domain",
                     children: [
-                        (0, daisuke_1.UITextField)({
+                        (0, daisuke_1.UIPicker)({
                             id: constants_1.PREF_KEYS.domain,
                             title: "Domain name",
+                            options: constants_1.DOMAIN_OPTIONS,
                             value: await store_1.GlobalStore.getDomain(),
                             didChange: store_1.GlobalStore.setDomain.bind(store_1.GlobalStore)
                         }),
@@ -685,7 +697,7 @@ class Parser {
             const id = $(element).find('span.ellipsis > a').attr('href') || "";
             const views = $(element).find('span.fl-r').text();
             let title = $(element).find('span.ellipsis > a').attr('title') || "";
-            title = `${title} [${views} views]`;
+            title = `${title} [${views} lượt xem]`;
             const cover = "";
             items.push({ id, title, cover });
         });
@@ -721,7 +733,7 @@ class Parser {
             const publishedDate = $(element).find('span.publishedDate').text();
             const categories = $(element).find("div.category > a").map((_, elem) => $(elem).text()).get().join(", ");
             const info = categories.match(/.{1,32}(,\s|$)|.{1,32}$/g) || [];
-            info.splice(0, 0, `${totalChapter} chương 🕒 ${publishedDate}`);
+            info.splice(0, 0, `${totalChapter} chương  🕒 ${publishedDate}`);
             if (id && !id.includes("blogtruyen"))
                 items.push({ id, title, cover, info: info.map(i => i.trim()) });
         });
@@ -754,11 +766,6 @@ class Parser {
         const uploader = $('p:contains("Đăng bởi:") > a').toArray();
         const categoryTags = this.createTags($, categories, true);
         const properties = [];
-        properties.push({
-            "id": "temp",
-            title: "Temp",
-            tags: []
-        });
         if (categories.length > 0) {
             properties.push({
                 id: "categories",
@@ -849,7 +856,7 @@ class Parser {
         $('#list-chapters > p').each((_, element) => {
             const chapterId = $(element).find('a').attr('href') || "";
             const title = $(element).find('a').attr('title')?.trim() || "";
-            let number = Number(title.match(/(?:Chap|Chương) (\d+(\.\d+)?)/i)?.[1]);
+            let number = Number(title.match(/(?:Chap|Chapter|Chương|Chuong) (\d+(\.\d+)?)/i)?.[1]);
             const date = $(element).find('span.publishedDate').text().trim() || "";
             if (!number) {
                 number = 0;
