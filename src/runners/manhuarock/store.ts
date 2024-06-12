@@ -1,28 +1,17 @@
-import {DEFAULT_EXCLUDED_TAGS, PREF_KEYS, SAYHENTAI_DOMAIN} from "./constants";
+import {MANHUAROCK_DOMAIN, PREF_KEYS} from "./constants";
 
 export class Store {
-
-    async getExcludeCategories(): Promise<string[]> {
-        const tags = await ObjectStore.stringArray(PREF_KEYS.exclude_categories);
-        if (!tags) return DEFAULT_EXCLUDED_TAGS;
-        return tags;
-    }
-
-    async setExcludeCategories(v: string[]) {
-        return ObjectStore.set(PREF_KEYS.exclude_categories, v);
-    }
-
     async getDomain() {
         const value = await ObjectStore.string(PREF_KEYS.domain);
         if (!value) {
-            return SAYHENTAI_DOMAIN
+            return MANHUAROCK_DOMAIN
         }
         return value
     }
 
     async setDomain(domain: string) {
         if (!this.isValidDomain(domain.trim())) {
-            await ObjectStore.set(PREF_KEYS.domain, SAYHENTAI_DOMAIN);
+            await ObjectStore.set(PREF_KEYS.domain, MANHUAROCK_DOMAIN);
             return;
         }
         await ObjectStore.set(PREF_KEYS.domain, domain.trim());
@@ -36,6 +25,5 @@ export class Store {
         return domainRegex.test(domain);
     }
 }
-
 
 export const GlobalStore = new Store();

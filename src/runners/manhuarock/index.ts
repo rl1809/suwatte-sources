@@ -17,24 +17,25 @@ import {
     ResolvedPageSection,
     RunnerInfo,
     RunnerPreferenceProvider,
-    UIMultiPicker,
-    UITextField,
+    UIPicker,
 } from "@suwatte/daisuke";
-import {PREF_KEYS, SAYHENTAI_DOMAIN, SEARCH_SORTERS} from "./constants";
+import {DOMAIN_OPTIONS, MANHUAROCK_DOMAIN, PREF_KEYS, SEARCH_SORTERS} from "./constants";
 import {Controller} from "./controller";
 import {GlobalStore} from "./store";
 
-export class Target
-    implements ContentSource, RunnerPreferenceProvider, PageLinkResolver, ImageRequestHandler {
+export class Target implements ContentSource,
+    PageLinkResolver,
+    ImageRequestHandler,
+    RunnerPreferenceProvider {
     info: RunnerInfo = {
-        id: "sayhentai",
-        website: SAYHENTAI_DOMAIN,
+        id: "manhuarock",
+        website: MANHUAROCK_DOMAIN,
         version: 0.1,
-        name: "SayHentai",
+        name: "ManhuaRock",
         supportedLanguages: ["vi-vn"],
-        thumbnail: "sayhentai.png",
+        thumbnail: "manhuarock.png",
         minSupportedAppVersion: "6.0",
-        rating: CatalogRating.NSFW,
+        rating: CatalogRating.SAFE,
     };
     private controller = new Controller();
 
@@ -44,30 +45,33 @@ export class Target
         };
     }
 
+    // Core
     async getContent(contentId: string): Promise<Content> {
         return this.controller.getContent(contentId);
     }
 
-    async getChapters(_: string): Promise<Chapter[]> {
-        return []
+    async getChapters(contentId: string): Promise<Chapter[]> {
+        return this.controller.getChapters(contentId);
     }
 
     async getChapterData(
-        contentId: string,
+        _: string,
         chapterId: string
     ): Promise<ChapterData> {
-        return this.controller.getChapterData(contentId, chapterId);
+        return this.controller.getChapterData(chapterId);
     }
 
     async getTags(): Promise<Property[]> {
-        const properties: Property[] = []
-        const tags = await this.controller.getCategories();
-        properties.push({id: "categories", title: "Thể loại", tags})
-        return properties
+        const tags = await this.controller.getTags();
+        return [{
+            id: "tags",
+            title: "Thể loại",
+            tags: tags,
+        }]
     }
 
     // Directory
-    getDirectory(request: DirectoryRequest): Promise<PagedResult> {
+    async getDirectory(request: DirectoryRequest): Promise<PagedResult> {
         return this.controller.getSearchResults(request);
     }
 
@@ -103,38 +107,28 @@ export class Target
             headers: {
                 ...await this.headers(),
             },
-        };
+        }
     }
 
-
-    // Preferences
     async getPreferenceMenu(): Promise<Form> {
         return {
             sections: [
                 {
-                    header: "Excluded Content",
+                    header: "ManhuaRock Domain",
                     children: [
-                        UIMultiPicker({
-                            id: PREF_KEYS.exclude_categories,
-                            title: `Excluded Categories`,
-                            options: await this.controller.getCategories(),
-                            value: await GlobalStore.getExcludeCategories(),
-                            didChange: GlobalStore.setExcludeCategories,
-                        }),
-                    ],
-                },
-                {
-                    header: "SayHentai Domain",
-                    children: [
-                        UITextField({
-                            id: PREF_KEYS.domain,
-                            title: "Domain name",
-                            value: await GlobalStore.getDomain(),
-                            didChange: GlobalStore.setDomain.bind(GlobalStore)
-                        }),
+                        UIPicker(
+                            {
+                                id: PREF_KEYS.domain,
+                                title: "Domain name",
+                                options: DOMAIN_OPTIONS,
+                                value: await GlobalStore.getDomain(),
+                                didChange: GlobalStore.setDomain.bind(GlobalStore)
+                            }
+                        ),
                     ],
                 },
             ],
         };
     }
 }
+
