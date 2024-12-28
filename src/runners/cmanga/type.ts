@@ -74,6 +74,11 @@ export interface Chapter {
     id?: string;
 }
 
+export interface ChapterImage {
+    image: string[];
+}
+
+
 
 export interface Genre {
     name: string;
@@ -83,3 +88,9 @@ export interface Genre {
     string: string;
 }
 
+export interface UserData {
+    country: string;
+    language: string;
+    avatar: string;
+    name: string
+}
