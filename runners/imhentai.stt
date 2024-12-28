@@ -1,228 +1,345 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.STTPackage = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.API = void 0;
-const constants_1 = require("./constants");
-const store_1 = require("./store");
-const utils_1 = require("./utils");
-const memory_cache_1 = __importDefault(require("memory-cache"));
-class API {
-    constructor() {
-        this.cache = new memory_cache_1.default.Cache();
-        this.client = new NetworkClient();
-    }
-    getGalleryInfo(galleryId) {
-        return this.cache.get(galleryId);
-    }
-    async getHomeGalleryList(request) {
-        const domain = await store_1.GlobalStore.getDomain();
-        if (request.value != "favorite") {
-            return this.searchGalleries({
-                p: request.p,
-                orders: [request.value],
-            });
-        }
-        const fetchGalleryPage = async (page) => {
-            const queryString = Object.entries({ ...request, p: page })
-                .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-                .join('&');
-            const url = `${domain + constants_1.API_HOME_FILTER}?${queryString}`;
-            const resp = await this.requestJSON({ url, method: "GET" });
-            return (0, utils_1.parseGalleries)(resp);
-        };
-        const pagePromises = Array.from({ length: 4 }, (_, i) => fetchGalleryPage(i));
-        const results = await Promise.all(pagePromises);
-        const allGalleries = results.flat();
-        allGalleries.forEach(gallery => {
-            this.cache.put(gallery.id, gallery);
-        });
-        return allGalleries;
-    }
-    async searchGalleries(request) {
-        const domain = await store_1.GlobalStore.getDomain();
-        const query = (0, utils_1.buildQueryString)(request);
-        const url = `${domain}${constants_1.API_SEARCH}?${query}`;
-        const json = await this.requestJSON({
-            url,
-            method: "GET"
-        });
-        const galleries = (0, utils_1.parseGalleries)(json);
-        galleries.forEach(gallery => {
-            this.cache.put(gallery.id, gallery);
-        });
-        return galleries;
-    }
-    async getChapterList(galleryId) {
-        const domain = await store_1.GlobalStore.getDomain();
-        const url = `${domain}${constants_1.API_GET_CHAPTER_LIST.replace('comicID', galleryId)}?offset=0&limit=-1`;
-        const json = await this.requestJSON({
-            url,
-            method: "GET"
-        });
-        return (0, utils_1.parseChapters)(json);
-    }
-    async getChapterImages(comicId, chapterNumber) {
-        const domain = await store_1.GlobalStore.getDomain();
-        const url = domain + constants_1.API_CHAPTER_IMAGES;
-        const json = await this.requestJSON({
-            url,
-            method: "POST",
-            headers: {
-                'authorization': constants_1.AUTH_TOKEN,
-                'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                'x-requested-with': "XMLHttpRequest"
-            },
-            body: {
-                comicId: comicId,
-                chapterNumber: chapterNumber,
-            }
-        });
-        return (0, utils_1.parseChapterImages)(json);
-    }
-    async getCategories() {
-        const domain = await store_1.GlobalStore.getDomain();
-        const url = domain + constants_1.API_CATEGORY;
-        const json = await this.requestJSON({ url, method: "GET", });
-        return (0, utils_1.parseCategories)(json);
-    }
-    async requestJSON(request) {
-        try {
-            console.log(`Performing JSON request: ${JSON.stringify(request)}`);
-            const { data: resp } = await this.client.request(request);
-            return JSON.parse(resp) ?? resp;
-        }
-        catch (ex) {
-            const err = ex;
-            console.error('Error occurred during JSON request:', err);
-            throw ex;
-        }
-    }
-}
-exports.API = API;
-
-},{"./constants":2,"./store":6,"./utils":7,"memory-cache":72}],2:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.DEFAULT_FILTERS = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.PREF_KEYS = exports.AUTH_TOKEN = exports.API_CATEGORY = exports.API_CHAPTER_IMAGES = exports.API_GET_CHAPTER_LIST = exports.API_SEARCH = exports.API_HOME_FILTER = exports.GOCTRUYENTRANH_DOMAIN = void 0;
+exports.TAG_COVER_URL = exports.EXCLUDED_TAG = exports.DEFAULT_EXCLUDED_TAGS = exports.FILTERS = exports.LANGUAGE_MAPPING = exports.SEARCH_SORTERS = exports.LANGUAGE_OPTIONS = exports.LANGUAGES = exports.SECTIONS = exports.HOME_PAGE_SECTIONS = exports.MANGA_READING_TYPES = exports.VERTICAL_READING_TYPES = exports.COMPLETED_STATUS_DATE_THRESHOLD = exports.PREF_KEYS = exports.IMHENTAI_DOMAIN = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
-exports.GOCTRUYENTRANH_DOMAIN = "https://goctruyentranhvui1.com";
-exports.API_HOME_FILTER = "/api/v2/home/filter";
-exports.API_SEARCH = "/api/v2/search";
-exports.API_GET_CHAPTER_LIST = "/api/comic/comicID/chapter";
-exports.API_CHAPTER_IMAGES = "/api/chapter/limitation";
-exports.API_CATEGORY = "/api/category";
-exports.AUTH_TOKEN = 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJWxINuIEhvw6BuZyDEkGluaCIsImNvbWljSWRzIjpbXSwicm9sZUlkIjpudWxsLCJncm91cElkIjpudWxsLCJhZG1pbiI6ZmFsc2UsInJhbmsiOjAsInBlcm1pc3Npb24iOltdLCJpZCI6IjAwMDA1MjYzNzAiLCJ0ZWFtIjpmYWxzZSwiaWF0IjoxNzE1NDI0NDU3LCJlbWFpbCI6Im51bGwifQ.EjYw-HvoWM6RhbNzJkp06sSh61leaPcND0gb94PlDKeTYxfxU-f6WaxINAVjVYOP0pcVcG3YmfBVb4FVEBqPxQ';
+exports.IMHENTAI_DOMAIN = "https://imhentai.xxx";
 exports.PREF_KEYS = {
-    request: "request",
-    domain: "domain",
+    cache_chapter_images: "chapter_images",
+    cache_request: "request",
+    cache_tags: "tags_",
+    lang: "language",
+    exclude_tags: "exclude_tags",
+    number_of_tag_pages: "number_of_tag_pages",
+    number_of_images_per_chapter: "number_of_images_per_chapter"
 };
-exports.STATUS_KEYS = {
-    "STA": daisuke_1.PublicationStatus.ONGOING,
-    "PRG": daisuke_1.PublicationStatus.ONGOING,
-    "END": daisuke_1.PublicationStatus.COMPLETED,
-    "PDG": daisuke_1.PublicationStatus.HIATUS,
-    "STO": daisuke_1.PublicationStatus.CANCELLED,
-};
-exports.VERTICAL_TYPES = ["Manhwa", "Manhua", "Truyện Màu", "Webtoons"];
-const STATUES = [
-    {
-        id: "STA",
-        title: "Chưa bắt đầu",
-    },
-    {
-        id: "STO",
-        title: "Đã dừng",
-    },
-    {
-        id: "PDG",
-        title: "Hoãn lại",
-    }, {
-        id: "PRG",
-        title: "Đang thực hiện",
-    }, {
-        id: "END",
-        title: "Hoàn thành",
-    }
-];
-exports.DEFAULT_FILTERS = [
-    {
-        id: "keyword",
-        title: "Từ khoá",
-        type: daisuke_1.FilterType.TEXT,
-    },
-    {
-        id: "status",
-        title: "Trạng thái",
-        type: daisuke_1.FilterType.MULTISELECT,
-        options: STATUES
-    },
-];
+exports.COMPLETED_STATUS_DATE_THRESHOLD = 1000 * 60 * 60 * 24 * 365; // milliseconds in a year
+exports.VERTICAL_READING_TYPES = ["Webtoon"];
+exports.MANGA_READING_TYPES = ["Manga", "Doujinshi"];
 exports.HOME_PAGE_SECTIONS = [
     {
-        id: "favorite",
-        title: "Truyện Hay",
+        id: "manga",
+        title: "Manga",
         style: daisuke_1.SectionStyle.GALLERY,
+        viewMoreLink: {
+            request: {
+                page: 1,
+                tag: {
+                    tagId: "/category/manga/",
+                    propertyId: "category"
+                },
+                sort: { id: "" }
+            }
+        },
     },
     {
-        id: "createdAt",
-        title: "Truyện Mới",
-        style: daisuke_1.SectionStyle.INFO,
-        viewMoreLink: { request: { page: 1, sort: { id: "createdAt" } } },
-    },
-    {
-        id: "viewCount",
-        title: "Xem Nhiều",
+        id: "doujinshi",
+        title: "Doujinshi",
         style: daisuke_1.SectionStyle.GALLERY,
-        viewMoreLink: { request: { page: 1, sort: { id: "viewCount" } } },
+        viewMoreLink: {
+            request: {
+                page: 1,
+                tag: {
+                    tagId: "/category/doujinshi/",
+                    propertyId: "category"
+                },
+                sort: { id: "" }
+            }
+        },
     },
     {
-        id: "recentDate",
-        title: "Cập Nhật Gần Đây",
-        style: daisuke_1.SectionStyle.PADDED_LIST,
-        viewMoreLink: { request: { page: 1, sort: { id: "recentDate" } } },
+        id: "western",
+        title: "Western",
+        style: daisuke_1.SectionStyle.GALLERY,
+        viewMoreLink: {
+            request: {
+                page: 1,
+                tag: {
+                    tagId: "/category/western/",
+                    propertyId: "category"
+                },
+                sort: { id: "" }
+            }
+        },
+    },
+    {
+        id: "image-set",
+        title: "Image Set",
+        style: daisuke_1.SectionStyle.GALLERY,
+        viewMoreLink: {
+            request: {
+                page: 1,
+                tag: {
+                    tagId: "/category/image-set/",
+                    propertyId: "category"
+                },
+                sort: { id: "" }
+            }
+        },
+    },
+    {
+        id: "artist-cg",
+        title: "Artist CG",
+        style: daisuke_1.SectionStyle.GALLERY,
+        viewMoreLink: {
+            request: {
+                page: 1,
+                tag: {
+                    tagId: "/category/artist-cg/",
+                    propertyId: "category"
+                },
+                sort: { id: "" }
+            }
+        },
+    },
+    {
+        id: "game-cg",
+        title: "Game CG",
+        style: daisuke_1.SectionStyle.GALLERY,
+        viewMoreLink: {
+            request: {
+                page: 1, tag: {
+                    tagId: "/category/game-cg/",
+                    propertyId: "category"
+                },
+                sort: { id: "" }
+            }
+        },
     },
 ];
-exports.SEARCH_SORTERS = [
+exports.SECTIONS = {
+    id: "section",
+    title: "Sections",
+    style: daisuke_1.SectionStyle.TAG,
+    items: [
+        {
+            id: "tags",
+            title: "Tags",
+            cover: "",
+            link: {
+                request: {
+                    page: 1,
+                    tag: {
+                        propertyId: "section",
+                        tagId: "tags"
+                    }
+                }
+            }
+        },
+        {
+            id: "artists",
+            title: "Artists",
+            cover: "",
+            link: {
+                request: {
+                    page: 1,
+                    tag: {
+                        propertyId: "section",
+                        tagId: "artists"
+                    }
+                }
+            }
+        },
+        {
+            id: "characters",
+            title: "Characters",
+            cover: "",
+            link: {
+                request: {
+                    page: 1,
+                    tag: {
+                        propertyId: "section",
+                        tagId: "characters"
+                    }
+                }
+            }
+        },
+        {
+            id: "parodies",
+            title: "Parodies",
+            cover: "",
+            link: {
+                request: {
+                    page: 1,
+                    tag: {
+                        propertyId: "section",
+                        tagId: "parodies"
+                    }
+                }
+            }
+        },
+        {
+            id: "groups",
+            title: "Groups",
+            cover: "",
+            link: {
+                request: {
+                    page: 1,
+                    tag: {
+                        propertyId: "section",
+                        tagId: "groups"
+                    }
+                }
+            }
+        }
+    ]
+};
+const CATEGORIES = [
     {
-        id: "recentDate",
-        title: "Ngày cập nhật",
+        id: "m",
+        title: "Manga",
     },
     {
-        id: "viewCount",
-        title: "Lượt xem",
+        id: "d",
+        title: "Doujinshi",
     },
     {
-        id: "evaluationScore",
-        title: "Lượt đánh giá",
+        id: "w",
+        title: "Western",
     },
     {
-        id: "followerCount",
-        title: "Lượt theo dõi",
+        id: "i",
+        title: "Image Set",
     },
     {
-        id: "createdAt",
-        title: "Truyện mới",
+        id: "a",
+        title: "Artist CG",
+    },
+    {
+        id: "g",
+        title: "Game CG",
     }
 ];
+exports.LANGUAGES = [
+    {
+        label: "English",
+        languageCode: "en",
+        regionCode: "gb",
+    },
+    {
+        label: "Japanese",
+        languageCode: "ja",
+        regionCode: "jp",
+    },
+    {
+        label: "Spanish",
+        languageCode: "es",
+        regionCode: "es",
+    },
+    {
+        label: "French",
+        languageCode: "fr",
+        regionCode: "fr",
+    },
+    {
+        label: "Korean",
+        languageCode: "ko",
+        regionCode: "kr",
+    },
+    {
+        label: "German",
+        languageCode: "de",
+        regionCode: "de",
+    },
+    {
+        label: "Russian",
+        languageCode: "ru",
+        regionCode: "ru",
+    }
+];
+exports.LANGUAGE_OPTIONS = exports.LANGUAGES.map(language => ({
+    id: language.languageCode != "ja" && language.languageCode != "ko" ? language.languageCode : language.regionCode,
+    title: language.label
+}));
+exports.SEARCH_SORTERS = [
+    {
+        id: "lt",
+        title: "Latest",
+    },
+    {
+        id: "pp",
+        title: "Popular",
+    },
+    {
+        id: "dl",
+        title: "Top Downloaded",
+    },
+    {
+        id: "tr",
+        title: "Top Rated",
+    },
+];
+exports.LANGUAGE_MAPPING = {
+    "2": "English",
+    "1": "Japanese",
+    "6": "Spanish",
+    "8": "French",
+    "7": "Korean",
+    "5": "German",
+    "10": "Russian",
+    "3": "UNKNOWN"
+};
+exports.FILTERS = [
+    {
+        id: "category",
+        title: "Category",
+        subtitle: "To exclude",
+        options: CATEGORIES,
+        type: daisuke_1.FilterType.MULTISELECT,
+    },
+    {
+        id: "language",
+        title: "Language",
+        subtitle: "To exclude",
+        options: exports.LANGUAGE_OPTIONS,
+        type: daisuke_1.FilterType.MULTISELECT,
+    },
+];
+exports.DEFAULT_EXCLUDED_TAGS = ["58", "117", "43"]; // guro, scat, yaoi
+exports.EXCLUDED_TAG = [
+    {
+        title: "guro",
+        id: "58",
+    },
+    {
+        title: "scat",
+        id: "117",
+    },
+    {
+        title: "yaoi",
+        id: "43",
+    },
+    {
+        title: "bbw",
+        id: "316",
+    },
+    {
+        title: "bestiality",
+        id: "70",
+    },
+    {
+        title: "furry",
+        id: "291"
+    }
+];
+exports.TAG_COVER_URL = "https://cdn.icon-icons.com/icons2/2406/PNG/512/tags_categories_icon_145927.png";
 
-},{"@suwatte/daisuke":8}],3:[function(require,module,exports){
+},{"@suwatte/daisuke":8}],2:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Controller = void 0;
+const daisuke_1 = require("@suwatte/daisuke");
 const constants_1 = require("./constants");
 const parser_1 = require("./parser");
+const cheerio_1 = require("cheerio");
 const memory_cache_1 = __importDefault(require("memory-cache"));
+const utils_1 = require("./utils");
 const store_1 = require("./store");
-const api_1 = require("./api");
 class Controller {
     constructor() {
-        this.api = new api_1.API();
         this.client = new NetworkClient();
         this.parser = new parser_1.Parser();
         this.cache = new memory_cache_1.default.Cache();
@@ -231,11 +348,8 @@ class Controller {
         const promises = [];
         const sections = [];
         for (const section of constants_1.HOME_PAGE_SECTIONS) {
-            promises.push(this.api.getHomeGalleryList({
-                p: 0,
-                value: section.id,
-            }).then(async (galleries) => {
-                const items = await this.parser.getSearchResults(galleries);
+            promises.push(this.fetchHTML(`${constants_1.IMHENTAI_DOMAIN}/category/${section.id}`).then(async ($) => {
+                const items = await this.parser.getSearchResults($);
                 sections.push({ ...section, items });
             }));
         }
@@ -244,81 +358,174 @@ class Controller {
             return section.id;
         });
         sections.sort((a, b) => sectionIdInOrder.indexOf(a.id) - sectionIdInOrder.indexOf(b.id));
-        return sections.filter(a => a.items?.length);
+        sections.splice(0, 0, constants_1.SECTIONS);
+        return sections;
     }
     async getSearchResults(request) {
-        const searchRequest = await this.createSearchRequest(request);
-        const galleries = await this.api.searchGalleries(searchRequest);
-        const results = await this.parser.getSearchResults(galleries, true);
+        const searchConfig = await this.createSearchURL(request);
+        const $ = await this.fetchHTML(searchConfig.url);
+        const parseFunction = searchConfig.func.bind(this.parser);
+        const results = await parseFunction($);
         return {
             results,
-            isLastPage: false
+            isLastPage: this.parser.isLastPage($)
         };
     }
-    async createSearchRequest(request) {
+    async createSearchURL(request) {
+        const searchOptions = {
+            lt: 0,
+            pp: 0,
+            dl: 0,
+            tr: 0,
+            en: 1,
+            jp: 1,
+            es: 1,
+            fr: 1,
+            kr: 1,
+            de: 1,
+            ru: 1,
+            m: 1,
+            d: 1,
+            w: 1,
+            i: 1,
+            a: 1,
+            g: 1, // game cg
+        };
+        let keyword = "";
+        let baseUrl = `${constants_1.IMHENTAI_DOMAIN}/search`;
+        const cacheKey = constants_1.PREF_KEYS.cache_request;
         // eslint-disable-next-line prefer-const
         let { filters, query, tag, sort, page } = request;
-        if (!filters && !query && !tag && sort?.id) {
-            request = this.cache.get(constants_1.PREF_KEYS.request) ?? request;
+        if (!filters && !query && !tag && sort && sort.id) {
+            request = this.cache.get(cacheKey) ?? request;
+            filters = request.filters;
             query = request.query;
             tag = request.tag;
         }
-        const sort_id = sort?.id || "recentDate";
-        const searchRequest = {
-            p: page - 1,
-            orders: [sort_id]
-        };
-        if (!filters && !query && !tag) {
-            this.cache.del(constants_1.PREF_KEYS.request);
+        if (sort && sort.id) {
+            searchOptions[sort.id] = 1;
         }
-        if (filters || query || tag) {
-            this.cache.put(constants_1.PREF_KEYS.request, request);
-        }
+        this.cache.put(cacheKey, request);
         if (filters) {
-            searchRequest.searchValue = filters.keyword;
-            searchRequest.categories = filters.categories ?? [];
-            searchRequest.status = filters.status ?? [];
+            baseUrl = `${constants_1.IMHENTAI_DOMAIN}/advsearch`;
+            const tags = await this.getPopularTags();
+            const tagsMap = new Map(tags.map(tag => [tag.id, tag.title]));
+            const categories = filters.category ?? [];
+            const languages = filters.language ?? [];
+            const includeTags = filters.tags?.included ?? [];
+            const excludeTags = filters.tags?.excluded ?? [];
+            for (const category of categories) {
+                searchOptions[category] = 0;
+            }
+            for (const language of languages) {
+                searchOptions[language] = 0;
+            }
+            for (const tag of includeTags) {
+                keyword += ` +tag:"${(0, utils_1.startCase)(tagsMap.get(tag))}"`;
+            }
+            for (const tag of excludeTags) {
+                keyword += ` -tag:"${(0, utils_1.startCase)(tagsMap.get(tag))}"`;
+            }
+            keyword = keyword.trim();
         }
         if (query) {
-            searchRequest.searchValue = encodeURI(query.trim());
+            keyword = query;
         }
         if (tag) {
-            searchRequest.categories = [tag.tagId];
+            if (tag.propertyId == "section") {
+                return {
+                    url: `${constants_1.IMHENTAI_DOMAIN}/${tag.tagId}/popular?page=${page}`,
+                    func: this.parser.getTagAsHighLights
+                };
+            }
+            baseUrl = `${constants_1.IMHENTAI_DOMAIN}${tag.tagId}`;
+            if (sort && sort.id == "pp") {
+                baseUrl += "popular/";
+            }
+            return {
+                url: `${baseUrl}?page=${page}`,
+                func: this.parser.getSearchResults
+            };
         }
-        return searchRequest;
+        keyword = encodeURIComponent(keyword);
+        const param = `apply=Search&${Object.entries(searchOptions).map(([key, value]) => `${key}=${value}`).join('&')}`;
+        return {
+            url: `${baseUrl}/?key=${keyword}&${param}&page=${page}`,
+            func: this.parser.getSearchResults
+        };
+    }
+    async getPopularTags() {
+        const numPages = await store_1.GlobalStore.getNumPages();
+        const cacheKey = constants_1.PREF_KEYS.cache_tags + numPages;
+        const cachedTags = this.cache.get(cacheKey);
+        if (cachedTags) {
+            return cachedTags;
+        }
+        let popularTags = [];
+        const pagePromises = [];
+        for (let i = 1; i <= numPages; i++) {
+            pagePromises.push(this.fetchHTML(`${constants_1.IMHENTAI_DOMAIN}/tags/popular/?page=${i}`));
+        }
+        const pages = await Promise.all(pagePromises);
+        pages.forEach(page => {
+            popularTags.push(...this.parser.getTags(page));
+        });
+        popularTags = popularTags.sort((a, b) => a.title.localeCompare(b.title));
+        this.cache.put(cacheKey, popularTags);
+        return popularTags;
+    }
+    async getFilters() {
+        const filters = constants_1.FILTERS;
+        filters.push({
+            id: "tags",
+            title: "Tags",
+            type: daisuke_1.FilterType.EXCLUDABLE_MULTISELECT,
+            options: await this.getPopularTags()
+        });
+        return filters;
     }
     // Content
     async getContent(contentId) {
-        const domain = await store_1.GlobalStore.getDomain();
-        const gallery = this.api.getGalleryInfo(contentId);
-        const webUrl = `${domain}/truyen/${gallery?.nameEn}`;
-        const chapterInfos = await this.api.getChapterList(contentId);
-        return this.parser.getContent(gallery, chapterInfos, webUrl);
+        const webUrl = `${constants_1.IMHENTAI_DOMAIN}/gallery/${contentId}`;
+        const chapterDataUrl = `${constants_1.IMHENTAI_DOMAIN}/view/${contentId}/1`;
+        const [content, chapterDataCheerio] = await Promise.all([
+            this.fetchHTML(webUrl),
+            this.fetchHTML(chapterDataUrl),
+        ]);
+        const chapterData = this.parser.getChapterData(chapterDataCheerio);
+        this.cache.put(constants_1.PREF_KEYS.cache_chapter_images, chapterData);
+        return this.parser.getContent(content, chapterData, webUrl);
     }
-    // Chapters
-    async getChapters(contentId) {
-        const chapterInfos = await this.api.getChapterList(contentId);
-        return this.parser.getChapters(chapterInfos);
+    async getChapterData(contentId, chapterId) {
+        let chapterData = this.cache.get(constants_1.PREF_KEYS.cache_chapter_images);
+        const totalImages = chapterData.pages?.filter(v => v).map(v => String(v.url)) || [];
+        const numberOfImages = await store_1.GlobalStore.getNumImages();
+        if (numberOfImages == 0) {
+            void this.preload(totalImages);
+            return chapterData;
+        }
+        const getChapterImages = (images, k, i) => images.slice(i * k, (i + 1) * k);
+        const images = getChapterImages(totalImages, numberOfImages, Number(chapterId) - 1);
+        void this.preload(images);
+        chapterData = {
+            pages: images.map(v => ({ url: v }))
+        };
+        return chapterData;
     }
-    async getChapterData(comicId, chapterId) {
-        const urls = await this.api.getChapterImages(comicId, chapterId);
-        void this.preload(urls);
-        return this.parser.getChapterData(urls);
-    }
-    async preload(chapterImages) {
-        const domain = await store_1.GlobalStore.getDomain();
-        for (const url of chapterImages) {
-            void this.client.get(url, { headers: { Referer: domain + "/" } });
+    async preload(images) {
+        for (const image of images) {
+            void this.client.get(image, { headers: { Referer: constants_1.IMHENTAI_DOMAIN + "/" } });
         }
     }
-    async getFilters() {
-        const categories = await this.api.getCategories();
-        return this.parser.getFilters(categories);
+    async fetchHTML(url, config) {
+        console.log(`Requesting to the url: ${url}${config ? ", config: " + JSON.stringify(config) : ""}`);
+        const response = await this.client.get(url, config);
+        return (0, cheerio_1.load)(response.data);
     }
 }
 exports.Controller = Controller;
 
-},{"./api":1,"./constants":2,"./parser":5,"./store":6,"memory-cache":72}],4:[function(require,module,exports){
+},{"./constants":1,"./parser":4,"./store":5,"./utils":6,"@suwatte/daisuke":8,"cheerio":undefined,"memory-cache":72}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Target = void 0;
@@ -329,87 +536,110 @@ const store_1 = require("./store");
 class Target {
     constructor() {
         this.info = {
-            id: "goctruyentranh",
-            website: constants_1.GOCTRUYENTRANH_DOMAIN,
-            version: 0.3,
-            name: "GocTruyenTranh",
-            supportedLanguages: ["vi-vn"],
-            thumbnail: "goctruyentranh.png",
+            id: "imhentai",
+            website: constants_1.IMHENTAI_DOMAIN,
+            version: 1.2,
+            name: "IMHentai",
+            supportedLanguages: constants_1.LANGUAGES.map((v) => v.languageCode + "-" + v.regionCode),
+            thumbnail: "imhentai.png",
             minSupportedAppVersion: "6.0",
-            rating: daisuke_1.CatalogRating.SAFE,
+            rating: daisuke_1.CatalogRating.NSFW,
         };
         this.controller = new controller_1.Controller();
     }
-    async headers() {
+    headers() {
         return {
-            Referer: await store_1.GlobalStore.getDomain() + "/",
+            Referer: constants_1.IMHENTAI_DOMAIN + "/",
         };
     }
     // Core
     async getContent(contentId) {
         return this.controller.getContent(contentId);
     }
-    async getChapters(contentId) {
-        return this.controller.getChapters(contentId);
+    async getChapters(_) {
+        return [];
     }
-    async getChapterData(comicId, chapterId) {
-        return this.controller.getChapterData(comicId, chapterId);
+    async getChapterData(contentId, chapterId) {
+        return this.controller.getChapterData(contentId, chapterId);
     }
     async getTags() {
-        const filters = await this.controller.getFilters();
-        return filters.filter(f => f.id == "categories")
-            .map(({ id, title, options }) => ({
-            id,
-            title,
-            tags: (options ?? []).map((v) => ({
-                id: v.id,
-                title: v.title,
-            })),
-        }));
+        const properties = [];
+        const tags = await this.controller.getPopularTags();
+        properties.push({ id: "tags", title: "Tags", tags });
+        return properties;
     }
-    // Directory
-    async getDirectory(request) {
-        return this.controller.getSearchResults(request);
-    }
-    async getDirectoryConfig() {
-        return {
-            sort: {
-                options: constants_1.SEARCH_SORTERS,
-                canChangeOrder: false,
-                default: {
-                    id: "",
-                    ascending: false,
-                },
-            },
-            filters: await this.controller.getFilters()
-        };
-    }
-    // Page Links
     async getSectionsForPage(_) {
         return this.controller.buildHomePageSections();
     }
     resolvePageSection(_link, _sectionKey) {
         throw new Error("already resolved");
     }
+    // Directory
+    getDirectory(request) {
+        return this.controller.getSearchResults(request);
+    }
+    async getDirectoryConfig() {
+        return {
+            sort: {
+                options: constants_1.SEARCH_SORTERS,
+                canChangeOrder: true,
+                default: {
+                    id: "",
+                    ascending: false,
+                },
+            },
+            filters: await this.controller.getFilters(),
+        };
+    }
     async willRequestImage(url) {
         return {
             url,
             headers: {
-                ...await this.headers(),
+                ...this.headers(),
             },
         };
     }
+    // Preferences
     async getPreferenceMenu() {
         return {
             sections: [
                 {
-                    header: "GocTruyenTranh Domain",
+                    header: "Excluded Content",
                     children: [
-                        (0, daisuke_1.UITextField)({
-                            id: constants_1.PREF_KEYS.domain,
-                            title: "Domain name",
-                            value: await store_1.GlobalStore.getDomain(),
-                            didChange: store_1.GlobalStore.setDomain.bind(store_1.GlobalStore)
+                        (0, daisuke_1.UIMultiPicker)({
+                            id: "exclude_tags",
+                            title: `Excluded Tags`,
+                            options: constants_1.EXCLUDED_TAG,
+                            value: await store_1.GlobalStore.getExcludeTags(),
+                            didChange: store_1.GlobalStore.setExcludeTags,
+                        }),
+                    ],
+                },
+                {
+                    header: "Tags Fetching",
+                    children: [
+                        (0, daisuke_1.UIStepper)({
+                            id: constants_1.PREF_KEYS.number_of_tag_pages,
+                            title: `Number of popular tag pages`,
+                            lowerBound: 1,
+                            upperBound: 10,
+                            step: 1,
+                            value: await store_1.GlobalStore.getNumPages(),
+                            didChange: store_1.GlobalStore.setNumPages,
+                        }),
+                    ],
+                },
+                {
+                    header: "Chapter Split",
+                    children: [
+                        (0, daisuke_1.UIStepper)({
+                            id: constants_1.PREF_KEYS.number_of_images_per_chapter,
+                            title: `Max images per chapter`,
+                            lowerBound: 0,
+                            upperBound: 1000,
+                            step: 10,
+                            value: await store_1.GlobalStore.getNumImages(),
+                            didChange: store_1.GlobalStore.setNumImages,
                         }),
                     ],
                 },
@@ -419,228 +649,455 @@ class Target {
 }
 exports.Target = Target;
 
-},{"./constants":2,"./controller":3,"./store":6,"@suwatte/daisuke":8}],5:[function(require,module,exports){
+},{"./constants":1,"./controller":2,"./store":5,"@suwatte/daisuke":8}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const constants_1 = require("./constants");
 const store_1 = require("./store");
+const lodash_1 = require("lodash");
+const utils_1 = require("../../utils/utils");
 class Parser {
     constructor() {
-        this.convertTime = (timeAgo) => {
-            let trimmed = Number((/\d*/.exec(timeAgo) ?? [])[0]);
-            trimmed = (trimmed === 0 && timeAgo.includes('a')) ? 1 : trimmed;
-            if (timeAgo.includes('giây') || timeAgo.includes('secs')) {
-                return new Date(Date.now() - trimmed * 1000);
-            }
-            else if (timeAgo.includes('phút')) {
-                return new Date(Date.now() - trimmed * 60000);
-            }
-            else if (timeAgo.includes('giờ')) {
-                return new Date(Date.now() - trimmed * 3600000);
-            }
-            else if (timeAgo.includes('ngày')) {
-                return new Date(Date.now() - trimmed * 86400000);
-            }
-            else if (timeAgo.includes('tháng')) {
-                return new Date(Date.now() - trimmed * 2592000000);
-            }
-            else if (timeAgo.includes('năm')) {
-                return new Date(Date.now() - trimmed * 31556952000);
+        this.convertDate = (timeElement) => {
+            // Extract the time value using a regular expression
+            const match = /(\d+) (\w+) ago/.exec(timeElement);
+            if (match) {
+                const value = match[1] ? parseInt(match[1]) : 0;
+                const unit = match[2];
+                // Calculate the time in milliseconds based on the unit
+                let timeInMilliseconds = 0;
+                if (unit === 'seconds') {
+                    timeInMilliseconds = value * 1000;
+                }
+                else if (unit === 'minutes') {
+                    timeInMilliseconds = value * 60 * 1000;
+                }
+                else if (unit === 'hours') {
+                    timeInMilliseconds = value * 60 * 60 * 1000;
+                }
+                else if (unit === 'days') {
+                    timeInMilliseconds = value * 24 * 60 * 60 * 1000;
+                }
+                else if (unit === 'weeks') {
+                    timeInMilliseconds = value * 7 * 24 * 60 * 60 * 1000;
+                }
+                else if (unit === 'months') {
+                    // Approximate number of days in a month
+                    timeInMilliseconds = value * 30 * 24 * 60 * 60 * 1000;
+                }
+                else if (unit === 'years') {
+                    // Approximate number of days in a year
+                    timeInMilliseconds = value * 365 * 24 * 60 * 60 * 1000;
+                }
+                // Calculate the posting date by subtracting timeInMilliseconds from the current date
+                const currentDate = new Date();
+                return new Date(currentDate.getTime() - timeInMilliseconds);
             }
             else {
-                const [day, month, year] = timeAgo.split("-").map(Number);
-                if (!year || !month || !day) {
-                    return new Date();
-                }
-                return new Date(year, month - 1, day);
+                return new Date();
             }
         };
-    }
-    async getSearchResults(galleries, includeSubtitle) {
-        const items = [];
-        for (const gallery of galleries) {
-            const id = gallery.id;
-            const title = gallery.name;
-            const cover = await this.getImage(gallery.photo);
-            const info = [`Chương ${gallery.chapterLatest[0]} • ${gallery.chapterLatestDate[0]}`];
-            const categories = gallery.category?.join(", ").match(/.{1,32}(,\s|$)|.{1,32}$/g) || [];
-            info.push(...categories);
-            const item = { id, title, cover, info };
-            const lastChapter = `Chương ${gallery.chapterLatest[0]}`;
-            const totalViews = `👁️ ${gallery.viewCount}`;
-            const subtitle = [totalViews, lastChapter].join(' • ');
-            if (includeSubtitle) {
-                item.subtitle = subtitle;
+        this.isLastPage = ($) => {
+            let isLast = false;
+            const hasEnded = $('li.page-item', 'ul.pagination').last().attr('class');
+            if (hasEnded === 'page-item disabled')
+                isLast = true;
+            return isLast;
+        };
+        this.getLanguage = (dataLanguages) => {
+            const sortedDataLanguages = dataLanguages.sort(); // Sort the languages numerically if necessary
+            for (const language of sortedDataLanguages) {
+                const code = constants_1.LANGUAGE_MAPPING[language];
+                if (code && code !== "UNKNOWN") {
+                    return code;
+                }
             }
-            items.push(item);
+            return "UNKNOWN";
+        };
+    }
+    async getSearchResults($) {
+        const items = [];
+        for (const obj of $('div.thumb', 'div.row.galleries').toArray()) {
+            const cover = this.getImageSrc($('img', $('div.inner_thumb', obj)).first());
+            const title = $('h2, div.caption', obj).first().text().trim() ?? '';
+            const category = $('a.thumb_cat', obj).text().trim() ?? '';
+            const dataLanguages = ($(obj).attr('data-languages') ?? '').split(' ');
+            const language = `${this.getLanguage(dataLanguages)}`;
+            const subtitle = [category, language].filter(v => (v)).join(", ");
+            const id = $('h2 > a, div.caption > a', obj).attr('href')?.replace(/\/$/, '')?.split('/').pop() ?? '';
+            const excludeTags = await store_1.GlobalStore.getExcludeTagIDs();
+            const dataTags = ($(obj).attr('data-tags') ?? '').split(' ').map(tag => parseInt(tag, 10)).filter(tag => !isNaN(tag));
+            const containsExcludedTag = dataTags.some(tag => excludeTags.includes(tag));
+            if (!id || !title || containsExcludedTag)
+                continue;
+            items.push({ id, title, subtitle, cover });
         }
         return items;
     }
-    async getContent(gallery, chapterInfos, webUrl) {
-        if (!gallery) {
-            return {
-                title: "",
-                cover: ""
-            };
+    async getContent($, chapterData, webUrl) {
+        const title = $("h1").text();
+        const altTitle = $('p.subtitle').text();
+        const additionalTitles = [];
+        if (altTitle) {
+            additionalTitles.push(altTitle);
         }
-        const title = gallery.name;
-        const additionalTitles = gallery.otherName.split(',').map(v => v.trim());
-        const cover = await this.getImage(gallery.photo);
-        const summary = gallery.description;
-        const categories = [];
-        for (let i = 0; i < gallery.category.length; i++) {
-            categories.push({
-                id: gallery.categoryCode[i] || "",
-                title: gallery.category[i] || "",
-            });
+        const genres = $('a', $('span:contains(Tags)').parent()).toArray();
+        const parodies = $('a', $('span:contains(Parodies)').parent()).toArray();
+        const artists = $('a', $('span:contains(Artists)').parent()).toArray();
+        const characters = $('a', $('span:contains(Characters)').parent()).toArray();
+        const groups = $('a', $('span:contains(Groups)').parent()).toArray();
+        const languages = $('a', $('span:contains(Languages)').parent()).toArray();
+        const categories = $('a', $('span:contains(Category)').parent()).toArray();
+        const isNSFW = true;
+        let status = daisuke_1.PublicationStatus.ONGOING;
+        const timeElement = $('li.posted').text();
+        const date = this.convertDate(timeElement);
+        const currentDate = new Date();
+        if (currentDate.getTime() - date.getTime() > constants_1.COMPLETED_STATUS_DATE_THRESHOLD) {
+            status = daisuke_1.PublicationStatus.COMPLETED;
         }
-        // Reading Mode
-        let recommendedPanelMode = daisuke_1.ReadingMode.PAGED_MANGA;
-        categories.forEach((item) => {
-            if (constants_1.VERTICAL_TYPES.includes(item.title)) {
+        let recommendedPanelMode = daisuke_1.ReadingMode.PAGED_COMIC;
+        const genreTags = this.createTags($, genres);
+        const categoryTags = this.createTags($, categories);
+        categoryTags.forEach((tag) => {
+            if (constants_1.MANGA_READING_TYPES.includes(tag.title)) {
+                recommendedPanelMode = daisuke_1.ReadingMode.PAGED_MANGA;
+            }
+        });
+        genreTags.forEach((tag) => {
+            if (constants_1.VERTICAL_READING_TYPES.includes(tag.title)) {
                 recommendedPanelMode = daisuke_1.ReadingMode.WEBTOON;
             }
         });
-        const status = constants_1.STATUS_KEYS[gallery.statusCode];
         const properties = [];
         properties.push({
-            id: "categories",
-            title: "Categories",
-            tags: categories,
+            "id": "temp",
+            title: "Temp",
+            tags: []
         });
-        const chapters = this.getChapters(chapterInfos);
+        if (genres.length > 0) {
+            properties.push({
+                id: "tags",
+                title: "Tags",
+                tags: genreTags,
+            });
+        }
+        if (parodies.length > 0) {
+            properties.push({
+                id: "parodies",
+                title: "Parodies",
+                tags: this.createTags($, parodies),
+            });
+        }
+        if (artists.length > 0) {
+            properties.push({
+                id: "artists",
+                title: "Artists",
+                tags: this.createTags($, artists),
+            });
+        }
+        if (characters.length > 0) {
+            properties.push({
+                id: "characters",
+                title: "Characters",
+                tags: this.createTags($, characters),
+            });
+        }
+        if (groups.length > 0) {
+            properties.push({
+                id: "groups",
+                title: "Groups",
+                tags: this.createTags($, groups),
+            });
+        }
+        if (languages.length > 0) {
+            properties.push({
+                id: "languages",
+                title: "Languages",
+                tags: this.createTags($, languages),
+            });
+        }
+        if (categories.length > 0) {
+            properties.push({
+                id: "category",
+                title: "Category",
+                tags: categoryTags,
+            });
+        }
+        const coverElement = $('img.lazy').first();
+        const cover = coverElement.attr('data-src') || coverElement.first().attr('src') || "";
+        const chapters = await this.getChapters($, chapterData);
+        const totalImages = $('li.pages').text().replace('Pages: ', '');
+        const likes = $('#like_btn').text();
+        const dislikes = $('#dlike_btn').text();
+        const favourites = $('#add_fav_btn').text().trim().match(/\d+/)?.[0];
+        const download = $('.dl_btn').text().trim().match(/\d+/)?.[0];
+        const fapped = $('#fap_btn').text().trim().match(/\d+/)?.[0];
         const info = [
-            `👁️ Lượt xem: ${gallery.viewCount}`,
-            `❤️ Lượt theo dõi: ${gallery.followerCount}`,
-            `⭐️ Đánh giá: ${gallery.evaluationScore.toFixed(1)}/5`,
-        ].filter((v) => !!v);
+            `👍🏻 ${likes}  👎🏻 ${dislikes}`,
+            `🤍 Favourite (${favourites})`,
+            `⬇️ Download (${download})`,
+            `😄 Fapped (${fapped})`,
+            `🖼️ Images: ${totalImages}`,
+        ];
+        // Related Content
+        const collections = [];
+        const relatedGalleries = this.getRelatedGalleries($);
+        if (relatedGalleries.length > 0) {
+            collections.push({
+                id: "related_galleries",
+                title: "Related Galleries",
+                highlights: relatedGalleries,
+            });
+        }
         return {
             title,
             additionalTitles,
             cover,
-            summary,
+            status,
             recommendedPanelMode,
+            isNSFW,
+            webUrl,
             chapters,
             properties,
             info,
-            status,
-            webUrl,
+            collections
         };
     }
-    getChapters(chapterInfos) {
+    getRelatedGalleries($) {
+        const items = [];
+        $('div.row.related div.thumb').each((_, gallery) => {
+            const id = $(gallery).find('div.inner_thumb a').attr('href')?.replace(/\/$/, '')?.split('/').pop() ?? '';
+            const title = $(gallery).find('h2.gallery_title').text().split("|")[0] || "";
+            const cover = this.getImageSrc($(gallery).find('img.lazy'));
+            let subtitle = $('a.thumb_cat', gallery).text().trim() ?? '';
+            const dataLanguages = ($(gallery).attr('data-languages') ?? '').split(' ');
+            subtitle += `, ${this.getLanguage(dataLanguages)}`;
+            if (id) {
+                items.push({ id, title, subtitle, cover });
+            }
+        });
+        return items;
+    }
+    async getChapters($, chapterData) {
         const chapters = [];
-        let index = 1;
-        for (const chapterInfo of chapterInfos) {
-            const chapterId = chapterInfo.numberChapter;
-            const number = Number(chapterInfo.numberChapter);
-            const title = `Chương ${number}`;
-            const date = this.convertTime(chapterInfo.stringUpdateTime);
+        const languageTag = $('a', $('span:contains(Language)').parent()).first().text().trim();
+        let language = 'en-gb';
+        if (languageTag.includes('japanese')) {
+            language = 'ja-jp';
+        }
+        else if (languageTag.includes('spanish')) {
+            language = 'es-es';
+        }
+        else if (languageTag.includes('french')) {
+            language = 'fr-fr';
+        }
+        else if (languageTag.includes('korean')) {
+            language = 'ko-kr';
+        }
+        else if (languageTag.includes('german')) {
+            language = 'de-de';
+        }
+        else if (languageTag.includes('russian')) {
+            language = 'ru-ru';
+        }
+        const timeElement = $('li.posted').text();
+        const images = chapterData.pages?.filter(v => v).map(v => String(v.url)) || [];
+        const numberOfImages = await store_1.GlobalStore.getNumImages();
+        if (numberOfImages == 0) {
             chapters.push({
-                chapterId,
-                number,
-                title,
-                index,
-                language: "vi-vn",
-                date: date,
+                chapterId: "chapter",
+                number: 1,
+                title: "Images",
+                index: 1,
+                language: language,
+                date: this.convertDate(timeElement),
             });
-            index++;
+            return chapters;
+        }
+        const numberOfChapters = Math.ceil(images.length / numberOfImages);
+        for (let i = numberOfChapters; i >= 1; i--) {
+            chapters.push({
+                chapterId: i.toString(),
+                number: i,
+                title: `Image ${(i - 1) * numberOfImages + 1} - ${Math.min(i * numberOfImages, images.length)}`,
+                index: numberOfChapters - i,
+                language: language,
+                date: this.convertDate(timeElement),
+            });
         }
         return chapters;
     }
-    async getChapterData(urls) {
-        const pages = await Promise.all(urls.map(async (url) => {
-            const imageUrl = await this.getImage(url);
-            return { url: imageUrl };
-        }));
-        return { pages };
+    getChapterData($) {
+        const pages = [];
+        const imageDir = $("#image_dir").val();
+        const galleryId = $("#gallery_id").val();
+        const imageUrl = $('#gimg').attr('data-src');
+        const imageServer = imageUrl.match(/:\/\/(www\.)?(.[^/]+)/)?.[2] || '';
+        const scriptContent = $("script").filter((_, el) => {
+            return $(el).text().includes("var g_th");
+        }).text();
+        const imageData = scriptContent.split("$.parseJSON('")[1]?.split("');")[0]?.trim() || "";
+        const images = JSON.parse(imageData);
+        for (const key in images) {
+            if (Object.prototype.hasOwnProperty.call(images, key)) {
+                const iext = images[key]?.replace(/"/g, "").split(",")[0];
+                const iextPr = (iext === "p") ? "png" : (iext === "b") ? "bmp" : (iext === "g") ? "gif" : (iext === "w") ? "webp" : "jpg";
+                const imageUrl = `https://${imageServer}/${imageDir}/${galleryId}/${key}.${iextPr}`;
+                pages.push(imageUrl);
+            }
+        }
+        return {
+            pages: pages.map((url) => ({ url })),
+        };
     }
-    getFilters(categories) {
-        const filters = constants_1.DEFAULT_FILTERS;
-        // categories
-        filters.push({
-            id: "categories",
-            title: "Thể loại",
-            type: daisuke_1.FilterType.MULTISELECT,
-            options: categories.map((v) => ({
-                id: v.id,
-                title: v.name,
-            })),
+    createTags($, elements) {
+        const tags = [];
+        for (const element of elements) {
+            tags.push({
+                title: (0, lodash_1.startCase)($(element).text().trim().replace(/(\d+\s*)+$/, '').trim()),
+                id: $(element).attr('href') || "",
+            });
+        }
+        return tags;
+    }
+    getImageSrc(imageObj) {
+        let image;
+        if (typeof imageObj?.attr('data-src') != 'undefined') {
+            image = imageObj?.attr('data-src');
+        }
+        else {
+            image = imageObj?.attr('src');
+        }
+        return image?.trim() || "";
+    }
+    getTags($) {
+        const tags = [];
+        $('div.row.stags div.col').each((_index, element) => {
+            const id = $(element).find('a').attr('href') || "";
+            const title = $(element).find('a>h3').text();
+            tags.push({ id, title: (0, lodash_1.startCase)(title) });
         });
-        return filters;
+        return tags;
     }
-    async getImage(url) {
-        const domain = await store_1.GlobalStore.getDomain();
-        return url.includes("goctruyentranh") ? url : domain + url;
+    async getTagAsHighLights($) {
+        const items = [];
+        $('div.row.stags div.col').each((_index, element) => {
+            const id = $(element).find('a').attr('href') || "";
+            const title = $(element).find('a>h3').text();
+            const count = $(element).find('span.badge').text();
+            const subtitle = `📚 ${(0, utils_1.numberWithDot)(count)}`;
+            items.push({
+                id,
+                title: (0, lodash_1.startCase)(title),
+                subtitle: subtitle,
+                cover: constants_1.TAG_COVER_URL,
+                link: {
+                    request: {
+                        page: 1,
+                        tag: {
+                            tagId: id,
+                            propertyId: "tags"
+                        }
+                    }
+                }
+            });
+        });
+        return items;
     }
 }
 exports.Parser = Parser;
 
-},{"./constants":2,"./store":6,"@suwatte/daisuke":8}],6:[function(require,module,exports){
+},{"../../utils/utils":7,"./constants":1,"./store":5,"@suwatte/daisuke":8,"lodash":undefined}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GlobalStore = exports.Store = void 0;
 const constants_1 = require("./constants");
 class Store {
-    async getDomain() {
-        const value = await ObjectStore.string(constants_1.PREF_KEYS.domain);
-        if (!value) {
-            return constants_1.GOCTRUYENTRANH_DOMAIN;
-        }
-        return value;
+    async getExcludeTagIDs() {
+        const tagIDs = await this.getExcludeTags();
+        return tagIDs.map(id => parseInt(id));
     }
-    async setDomain(domain) {
-        if (!this.isValidDomain(domain.trim())) {
-            await ObjectStore.set(constants_1.PREF_KEYS.domain, constants_1.GOCTRUYENTRANH_DOMAIN);
-            return;
-        }
-        await ObjectStore.set(constants_1.PREF_KEYS.domain, domain.trim());
+    async getExcludeTags() {
+        const tags = await ObjectStore.stringArray(constants_1.PREF_KEYS.exclude_tags);
+        if (!tags)
+            return constants_1.DEFAULT_EXCLUDED_TAGS;
+        return tags;
     }
-    isValidDomain(domain) {
-        // Regular expression for matching a valid domain with http or https
-        const domainRegex = /^(https?:\/\/)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        // Test the domain against the regex
-        return domainRegex.test(domain);
+    async setExcludeTags(v) {
+        return ObjectStore.set(constants_1.PREF_KEYS.exclude_tags, v);
+    }
+    async getNumPages() {
+        const numPages = await ObjectStore.number(constants_1.PREF_KEYS.number_of_tag_pages);
+        if (!numPages)
+            return 5;
+        return numPages;
+    }
+    async setNumPages(v) {
+        return ObjectStore.set(constants_1.PREF_KEYS.number_of_tag_pages, v);
+    }
+    async getNumImages() {
+        const numImages = await ObjectStore.number(constants_1.PREF_KEYS.number_of_images_per_chapter);
+        if (!numImages)
+            return 0;
+        return numImages;
+    }
+    async setNumImages(v) {
+        return ObjectStore.set(constants_1.PREF_KEYS.number_of_images_per_chapter, v);
     }
 }
 exports.Store = Store;
 exports.GlobalStore = new Store();
 
-},{"./constants":2}],7:[function(require,module,exports){
+},{"./constants":1}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildQueryString = exports.parseCategories = exports.parseChapterImages = exports.parseChapters = exports.parseGalleries = void 0;
-function parseGalleries(resp) {
-    return resp.result.data;
+exports.startCase = void 0;
+function startCase(str) {
+    if (!str) {
+        return "";
+    }
+    return str.toLowerCase().replace(/(?:^|\s)(\S)/g, function (match) {
+        return match.toUpperCase();
+    });
 }
-exports.parseGalleries = parseGalleries;
-function parseChapters(resp) {
-    return resp.result.chapters;
+exports.startCase = startCase;
+
+},{}],7:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.startCase = exports.numberWithDot = exports.isNumber = void 0;
+function isNumber(str) {
+    return /^[0-9]+$/.test(str);
 }
-exports.parseChapters = parseChapters;
-function parseChapterImages(resp) {
-    return resp.result.data;
+exports.isNumber = isNumber;
+function numberWithDot(num) {
+    return num.toString().replace('.', '').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
-exports.parseChapterImages = parseChapterImages;
-function parseCategories(resp) {
-    return resp.result;
-}
-exports.parseCategories = parseCategories;
-function buildQueryString(request) {
-    return Object.entries(request)
-        .flatMap(([key, value]) => {
-        if (Array.isArray(value)) {
-            return value.map(item => `${encodeURIComponent(key)}%5B%5D=${encodeURIComponent(item)}`);
+exports.numberWithDot = numberWithDot;
+function startCase(str) {
+    // Define Vietnamese characters
+    const vietnameseChars = "ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠạẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặẸẹẺẻẼẽẾếỀềỂểỄễỆệỈỉỊịỌọỎỏỐốỒồỔổỖỗỘộỚớỜờỞởỠỡỢợỤụỦủỨứỪừỬửỮữỰựỲỳỴỵỶỷỸỹ";
+    // Split the string into words
+    const words = str.split(/\s+/);
+    // Capitalize the first letter of each word
+    const capitalizedWords = words.map(word => {
+        // Check if the first character of the word is a Vietnamese character
+        if (vietnameseChars.includes(word.charAt(0))) {
+            // If yes, capitalize the first character using the uppercase Vietnamese character
+            return word.charAt(0).toUpperCase() + word.slice(1);
         }
-        if (value !== undefined) {
-            return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+        else {
+            // If not, capitalize the first character using regular rules
+            return word.charAt(0).toUpperCase() + word.slice(1);
         }
-        return [];
-    })
-        .join('&');
+    });
+    // Join the words back into a string
+    return capitalizedWords.join(' ');
 }
-exports.buildQueryString = buildQueryString;
+exports.startCase = startCase;
 
 },{}],8:[function(require,module,exports){
 "use strict";
@@ -1572,5 +2029,5 @@ function Cache () {
 module.exports = new Cache();
 module.exports.Cache = Cache;
 
-},{}]},{},[4])(4)
+},{}]},{},[3])(3)
 });

@@ -230,7 +230,7 @@ class Controller {
         }
         if (query) {
             return {
-                url: `${domain}/timkiem/nangcao/1/0/-1/-1?txt=${query}&p=${page}`
+                url: `${domain}/timkiem/nangcao/1/0/-1/-1?txt=${encodeURI(query)}&p=${page}`
             };
         }
         if (tag) {
@@ -552,7 +552,7 @@ class Target {
             id: "blogtruyen",
             website: constants_1.BLOGTRUYEN_DOMAIN,
             version: 1.2,
-            name: "BlogTruyen",
+            name: "BlogTruyen (Unavailable)",
             supportedLanguages: ["vi-vn"],
             thumbnail: "blogtruyen.png",
             minSupportedAppVersion: "6.0",

@@ -1,37 +1,30 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.STTPackage = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.VERTICAL_TYPES = exports.ADULT_TAGS = exports.STATUS_KEYS = exports.PREF_KEYS = exports.LIST_CHAPTER_BY_STORY_ID = exports.BAOTRANGTRUYEN_DOMAIN = void 0;
+exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.PREF_KEYS = exports.FAPELLO_DOMAIN = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
-exports.BAOTRANGTRUYEN_DOMAIN = "https://baotangtruyen13.com";
-exports.LIST_CHAPTER_BY_STORY_ID = "/Story/ListChapterByStoryID";
+exports.FAPELLO_DOMAIN = "https://fapello.com";
 exports.PREF_KEYS = {
     request: "request",
     domain: "domain",
+    cache_chapter_images: "chapter_images",
+    number_of_images_per_chapter: "number_of_images_per_chapter",
 };
-exports.STATUS_KEYS = {
-    "Đang tiến hành": daisuke_1.PublicationStatus.ONGOING,
-    "Đã hoàn thành": daisuke_1.PublicationStatus.COMPLETED,
-    "Tạm ngưng": daisuke_1.PublicationStatus.HIATUS,
-};
-exports.ADULT_TAGS = ["Mature", "Adult", "Smut"];
-exports.VERTICAL_TYPES = ["Manhwa", "Manhua", "Truyện Màu", "Webtoon"];
 exports.HOME_PAGE_SECTIONS = [
     {
-        id: "new-manga",
-        title: "Truyện Mới",
-        style: daisuke_1.SectionStyle.INFO,
-    },
-    {
-        id: "top-month",
-        title: "Top tháng",
+        id: "top-likes",
+        title: "Top Likes",
         style: daisuke_1.SectionStyle.GALLERY,
     },
     {
-        id: "update-manga",
-        title: "Truyện Mới Cập Nhật",
-        style: daisuke_1.SectionStyle.PADDED_LIST,
-        viewMoreLink: { request: { page: 1, sort: { id: "" } } },
+        id: "top-followers",
+        title: "Top Followers",
+        style: daisuke_1.SectionStyle.GALLERY,
+    },
+    {
+        id: "trending",
+        title: "Trending",
+        style: daisuke_1.SectionStyle.GALLERY,
     },
 ];
 exports.SEARCH_SORTERS = [
@@ -92,18 +85,23 @@ class Controller {
         this.cache = new memory_cache_1.default.Cache();
     }
     async buildHomePageSections() {
-        const domain = await store_1.GlobalStore.getDomain();
+        const promises = [];
         const sections = [];
-        const $ = await this.fetchHTML(domain);
         for (const section of constants_1.HOME_PAGE_SECTIONS) {
-            const items = this.parser.getHomepageSection($, section.id);
-            sections.push({ ...section, items });
+            promises.push(this.fetchHTML(`${constants_1.FAPELLO_DOMAIN}/ajax/${section.id}/page-1/`).then(async ($) => {
+                const items = this.parser.getSearchResults($);
+                sections.push({ ...section, items });
+            }));
         }
+        await Promise.all(promises);
+        const sectionIdInOrder = constants_1.HOME_PAGE_SECTIONS.map((section) => {
+            return section.id;
+        });
+        sections.sort((a, b) => sectionIdInOrder.indexOf(a.id) - sectionIdInOrder.indexOf(b.id));
         return sections.filter(a => a.items?.length);
     }
     async getSearchResults(request) {
-        const domain = await store_1.GlobalStore.getDomain();
-        const url = await this.createSearchURL(request, domain);
+        const url = await this.createSearchURL(request, constants_1.FAPELLO_DOMAIN);
         const $ = await this.fetchHTML(url);
         const results = this.parser.getSearchResults($);
         return {
@@ -136,23 +134,37 @@ class Controller {
     }
     // Content
     async getContent(contentId) {
-        const domain = await store_1.GlobalStore.getDomain();
-        const storyId = contentId.split('-').pop();
-        const [content, chapters] = await Promise.all([
-            this.fetchHTML(contentId),
-            this.fetchHTML(`${domain}${constants_1.LIST_CHAPTER_BY_STORY_ID}?StoryId=${storyId}`)
-        ]);
-        return this.parser.getContent(content, chapters, contentId);
+        const webUrl = `${constants_1.FAPELLO_DOMAIN}/${contentId}/`;
+        const $ = await this.fetchHTML(webUrl);
+        return this.parser.getContent($, webUrl);
     }
-    // Chapters
-    async getChapters(contentId) {
-        const domain = await store_1.GlobalStore.getDomain();
-        const $ = await this.fetchHTML(`${domain}${contentId}`);
-        return this.parser.getChapters($);
+    async getChapters(_) {
+        return [];
     }
-    async getChapterData(chapterId) {
-        const $ = await this.fetchHTML(chapterId);
-        return this.parser.getChapterData($);
+    async getChapterData(contentId, chapterId) {
+        let chapterData = this.cache.get(constants_1.PREF_KEYS.cache_chapter_images);
+        if (!chapterData) {
+            const $ = await this.fetchHTML(`${constants_1.FAPELLO_DOMAIN}/${contentId}/`);
+            chapterData = this.parser.getChapterData($, contentId);
+        }
+        const totalImages = chapterData.pages?.filter(v => v).map(v => String(v.url)) || [];
+        const numberOfImages = await store_1.GlobalStore.getNumImages();
+        if (numberOfImages == 0) {
+            void this.preload(totalImages);
+            return chapterData;
+        }
+        const getChapterImages = (images, k, i) => images.slice(i * k, (i + 1) * k);
+        const images = getChapterImages(totalImages, numberOfImages, Number(chapterId) - 1);
+        void this.preload(images);
+        chapterData = {
+            pages: images.map(v => ({ url: v }))
+        };
+        return chapterData;
+    }
+    async preload(images) {
+        for (const image of images) {
+            void this.client.get(image, { headers: { Referer: constants_1.FAPELLO_DOMAIN + "/" } });
+        }
     }
     async fetchHTML(url, config) {
         try {
@@ -183,20 +195,20 @@ const store_1 = require("./store");
 class Target {
     constructor() {
         this.info = {
-            id: "baotangtruyen",
-            website: constants_1.BAOTRANGTRUYEN_DOMAIN,
+            id: "fapello",
+            website: constants_1.FAPELLO_DOMAIN,
             version: 0.1,
-            name: "BaoTangTruyen",
-            supportedLanguages: ["vi-vn"],
-            thumbnail: "baotangtruyen.png",
+            name: "Fapello",
+            supportedLanguages: ["en-us"],
+            thumbnail: "fapello.png",
             minSupportedAppVersion: "6.0",
-            rating: daisuke_1.CatalogRating.SAFE,
+            rating: daisuke_1.CatalogRating.NSFW,
         };
         this.controller = new controller_1.Controller();
     }
-    async headers() {
+    headers() {
         return {
-            Referer: await store_1.GlobalStore.getDomain() + "/",
+            Referer: constants_1.FAPELLO_DOMAIN + "/",
         };
     }
     // Core
@@ -206,8 +218,8 @@ class Target {
     async getChapters(contentId) {
         return this.controller.getChapters(contentId);
     }
-    async getChapterData(_, chapterId) {
-        return this.controller.getChapterData(chapterId);
+    async getChapterData(contentId, chapterId) {
+        return this.controller.getChapterData(contentId, chapterId);
     }
     // Directory
     async getDirectory(request) {
@@ -236,7 +248,7 @@ class Target {
         return {
             url,
             headers: {
-                ...await this.headers(),
+                ...this.headers(),
             },
         };
     }
@@ -244,13 +256,16 @@ class Target {
         return {
             sections: [
                 {
-                    header: "BaoTangTruyen Domain",
+                    header: "Chapter Split",
                     children: [
-                        (0, daisuke_1.UITextField)({
-                            id: constants_1.PREF_KEYS.domain,
-                            title: "Domain name",
-                            value: await store_1.GlobalStore.getDomain(),
-                            didChange: store_1.GlobalStore.setDomain.bind(store_1.GlobalStore)
+                        (0, daisuke_1.UIStepper)({
+                            id: constants_1.PREF_KEYS.number_of_images_per_chapter,
+                            title: `Max images per chapter`,
+                            lowerBound: 0,
+                            upperBound: 1000,
+                            step: 10,
+                            value: await store_1.GlobalStore.getNumImages(),
+                            didChange: store_1.GlobalStore.setNumImages,
                         }),
                     ],
                 },
@@ -264,205 +279,101 @@ exports.Target = Target;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
-const daisuke_1 = require("@suwatte/daisuke");
-const constants_1 = require("./constants");
+const store_1 = require("./store");
 class Parser {
-    constructor() {
-        this.getTopMonthMangas = ($) => {
-            const items = [];
-            $('#topMonth ul li').each((_, manga) => {
-                const title = $('h3', manga).text().trim();
-                const id = $('a', manga).first().attr('href') || "";
-                const cover = $('img', manga).attr('src') || "";
-                const viewsInMonth = $('p.chapter.top span', manga).text().trim();
-                const latestChapter = $('p.chapter.top > a', manga).text().trim();
-                const info = [
-                    `Lượt xem tháng: ${viewsInMonth}`,
-                    latestChapter
-                ];
-                items.push({ id, title, info, cover });
-            });
-            return items;
-        };
-        this.convertTime = (timeAgo) => {
-            let trimmed = Number((/\d*/.exec(timeAgo) ?? [])[0]);
-            trimmed = (trimmed === 0 && timeAgo.includes('a')) ? 1 : trimmed;
-            if (timeAgo.includes('giây') || timeAgo.includes('secs')) {
-                return new Date(Date.now() - trimmed * 1000);
-            }
-            else if (timeAgo.includes('phút')) {
-                return new Date(Date.now() - trimmed * 60000);
-            }
-            else if (timeAgo.includes('giờ')) {
-                return new Date(Date.now() - trimmed * 3600000);
-            }
-            else if (timeAgo.includes('ngày')) {
-                return new Date(Date.now() - trimmed * 86400000);
-            }
-            else if (timeAgo.includes('tháng')) {
-                return new Date(Date.now() - trimmed * 2592000000);
-            }
-            else if (timeAgo.includes('năm')) {
-                return new Date(Date.now() - trimmed * 31556952000);
-            }
-            else if (timeAgo.includes(':')) {
-                const [H, D] = timeAgo.split(' ');
-                const fixD = String(D).split('/');
-                const finalD = `${fixD[1]}/${fixD[0]}/${new Date().getFullYear()}`;
-                return new Date(`${finalD} ${H}`);
-            }
-            else {
-                const split = timeAgo.split('/');
-                return new Date(`${split[1]}/${split[0]}/20${split[2]}`);
-            }
-        };
-    }
     getSearchResults($) {
         const items = [];
-        $('div.row > div.item').each((index, element) => {
-            const id = $(element).find('a').first().attr('href') || "";
-            const title = $(element).find('a').first().attr('title')?.trim() || "";
-            const cover = $(element).find('a>img').attr('src') || "";
-            items.push({ id, title, cover });
+        $('div.grid > div').each((_index, element) => {
+            const idElement = $(element).find('a[href]').attr('href');
+            const cover = $(element).find('img').eq(1).attr('src') || "";
+            const title = $(element).find('div > a[href]').last().text().trim();
+            if (idElement && cover && title) {
+                // Extract the mangaId from the href attribute
+                const id = idElement.match(/\/\/[^/]+\/([^/]+)\//)?.[1] || "";
+                // Push the extracted data to the items array
+                items.push({
+                    id: id,
+                    cover: cover,
+                    title: title,
+                });
+            }
         });
         return items;
     }
-    getNewMangas($) {
-        const items = [];
-        $('.items-slide.items-slide1>.owl-carousel.clearfix.owl-theme>div.item').each((_, element) => {
-            const id = $(element).find('a').first().attr('href') || "";
-            const title = $(element).find('a').first().attr('title')?.trim() || "";
-            const cover = $(element).find('a>img').attr('src') || "";
-            items.push({ id, title, cover });
-        });
-        return items;
-    }
-    getHomepageSection($, id) {
-        const highlights = [];
-        switch (id) {
-            case "update-manga":
-                return this.getSearchResults($);
-            case "new-manga":
-                return this.getNewMangas($);
-            case "top-month":
-                return this.getTopMonthMangas($);
-        }
-        return highlights;
-    }
-    async getContent($, chaptersCheerio, webUrl) {
-        const title = $('h1[itemprop="name"]').text().trim();
-        const cover = $('img[itemprop="image"]').attr('data-src') || "";
-        const summary = $(".detail-content > p").text().trim();
-        const genres = [];
-        $('.col-xs-12>a').each((_, obj) => {
-            const title = $(obj).text().trim();
-            const id = $(obj).attr('href') || "";
-            if (id) {
-                genres.push({ id: id, title: title, nsfw: constants_1.ADULT_TAGS.includes(title) });
-            }
-        });
-        // Reading Mode
-        let recommendedPanelMode = daisuke_1.ReadingMode.PAGED_MANGA;
-        genres.forEach((item) => {
-            if (constants_1.VERTICAL_TYPES.includes(item.title)) {
-                recommendedPanelMode = daisuke_1.ReadingMode.WEBTOON;
-            }
-        });
-        const properties = [];
-        if (genres.length > 0) {
-            properties.push({
-                id: "genres",
-                title: "Genres",
-                tags: genres,
-            });
-        }
-        const chapters = this.getChapters(chaptersCheerio);
+    async getContent($, webUrl) {
+        const title = $('h2.font-semibold').text().trim();
+        const cover = $('div.bg-gradient-to-tr a img').attr('src') || "";
+        // const mediaAndLikes = $('div.divide-gray-300.divide-transparent.divide-x.grid.grid-cols-2.lg\\:text-left.lg\\:text-lg.mt-3.text-center.w-full.dark\\:text-gray-100').text().trim();
+        // const [_, _] = mediaAndLikes.split(/\s+/);
+        const chapters = await this.getChapters($);
         return {
             title,
             cover,
-            summary,
             webUrl,
-            recommendedPanelMode,
             chapters,
-            properties
         };
     }
-    getChapters($) {
+    async getChapters($) {
         const chapters = [];
-        let index = 0;
-        let reassign = false;
-        $('nav>ul>li.row ').each((_, element) => {
-            const chapterId = $(element).find('a').attr('href') || "";
-            let title = $(element).find('a').text().trim();
-            let number = Number(title.match(/(?:Chapter|Chương) (\d+(\.\d+)?)/i)?.[1]);
-            if (!number) {
-                number = 0;
-                reassign = true;
-            }
-            const isLock = $(element).find('p.coin-unlock').attr('title') != null;
-            if (isLock) {
-                title += " (Đang khoá)";
-            }
-            const date = $(element).find('.col-xs-4.text-center.small').text().trim();
-            if (chapterId) {
-                chapters.push({
-                    chapterId,
-                    title,
-                    number,
-                    index,
-                    language: "vi-vn",
-                    date: this.convertTime(date),
-                });
-                index++;
-            }
-        });
-        if (reassign) {
-            let total = chapters.length;
-            chapters.map((chapter) => {
-                chapter.number = total;
-                total -= 1;
+        const mediaAndLikes = $('div.divide-gray-300.divide-transparent.divide-x.grid.grid-cols-2.lg\\:text-left.lg\\:text-lg.mt-3.text-center.w-full.dark\\:text-gray-100').text().trim();
+        const [images, _] = mediaAndLikes.split(/\s+/);
+        const numberOfImages = await store_1.GlobalStore.getNumImages();
+        if (numberOfImages == 0) {
+            chapters.push({
+                chapterId: "chapter",
+                number: 1,
+                title: "Images",
+                index: 1,
+                language: 'en-us',
+                date: new Date(),
+            });
+            return chapters;
+        }
+        const numberOfChapters = Math.ceil(Number(images) / numberOfImages);
+        for (let i = numberOfChapters; i >= 1; i--) {
+            chapters.push({
+                chapterId: i.toString(),
+                number: i,
+                title: `Image ${(i - 1) * numberOfImages + 1} - ${Math.min(i * numberOfImages, Number(images))}`,
+                index: numberOfChapters - i,
+                language: 'en-us',
+                date: new Date(),
             });
         }
         return chapters;
     }
-    async getChapterData($) {
-        const urls = [];
-        $('.reading-detail.box_doc > .page-chapter').each((_, element) => {
-            const url = $(element).find('img').attr('src') || "";
-            urls.push(url);
-        });
+    getChapterData($, contentId) {
+        const pages = [];
+        const avatarImgURL = $('div.bg-gradient-to-tr a img').attr('src') || "";
+        const baseImgURL = avatarImgURL.match(/^(.+?)\/\d+\/.+$/)?.[1];
+        const mediaAndLikes = $('div.divide-gray-300.divide-transparent.divide-x.grid.grid-cols-2.lg\\:text-left.lg\\:text-lg.mt-3.text-center.w-full.dark\\:text-gray-100').text().trim();
+        const lastImageSrc = $('#content img').first().attr('src') || "";
+        const lastImageIndex = parseInt(lastImageSrc.match(/(\d+)(?=_[^_]*\.jpg$)/)?.[1] || '', 10);
+        const [images, _] = mediaAndLikes.split(/\s+/);
+        for (let i = 0; i <= Number(images); i++) {
+            pages.push(`${baseImgURL}/${(Math.floor((lastImageIndex - i) / 1000) + 1) * 1000}/${contentId}_${String(lastImageIndex - i).padStart(4, '0')}.jpg`);
+        }
         return {
-            pages: urls.map((url) => ({ url })),
+            pages: pages.map((url) => ({ url })),
         };
     }
 }
 exports.Parser = Parser;
 
-},{"./constants":1,"@suwatte/daisuke":6}],5:[function(require,module,exports){
+},{"./store":5}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GlobalStore = exports.Store = void 0;
 const constants_1 = require("./constants");
 class Store {
-    async getDomain() {
-        const value = await ObjectStore.string(constants_1.PREF_KEYS.domain);
-        if (!value) {
-            return constants_1.BAOTRANGTRUYEN_DOMAIN;
-        }
-        return value;
+    async getNumImages() {
+        const numImages = await ObjectStore.number(constants_1.PREF_KEYS.number_of_images_per_chapter);
+        if (!numImages)
+            return 0;
+        return numImages;
     }
-    async setDomain(domain) {
-        if (!this.isValidDomain(domain.trim())) {
-            await ObjectStore.set(constants_1.PREF_KEYS.domain, constants_1.BAOTRANGTRUYEN_DOMAIN);
-            return;
-        }
-        await ObjectStore.set(constants_1.PREF_KEYS.domain, domain.trim());
-    }
-    isValidDomain(domain) {
-        // Regular expression for matching a valid domain with http or https
-        const domainRegex = /^(https?:\/\/)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        // Test the domain against the regex
-        return domainRegex.test(domain);
+    async setNumImages(v) {
+        return ObjectStore.set(constants_1.PREF_KEYS.number_of_images_per_chapter, v);
     }
 }
 exports.Store = Store;

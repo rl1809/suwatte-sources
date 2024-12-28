@@ -358,7 +358,7 @@ class Target {
         this.info = {
             id: "truyenqq",
             website: constants_1.TRUYENQQ_DOMAIN,
-            version: 1.1,
+            version: 1.2,
             name: "TruyenQQ",
             supportedLanguages: ["vi-vn"],
             thumbnail: "truyenqq.png",
@@ -535,7 +535,7 @@ class Parser {
             const info = categories.match(/.{1,32}(,\s|$)|.{1,32}$/g) || [];
             const chapterNumber = $(element).find('div.last_chapter a').text();
             const timeAgo = $(element).find('div.top-notice span.time-ago').text();
-            const lastChapterInfo = `${chapterNumber}  🕒 ${timeAgo}`;
+            const lastChapterInfo = `${chapterNumber} • ${timeAgo}`;
             info.splice(0, 0, lastChapterInfo);
             item.info = info.map(i => i.trim());
             if (!excludeSubtitle) {
