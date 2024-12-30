@@ -331,7 +331,7 @@ class Target {
         this.info = {
             id: "goctruyentranh",
             website: constants_1.GOCTRUYENTRANH_DOMAIN,
-            version: 0.3,
+            version: 0.4,
             name: "GocTruyenTranh",
             supportedLanguages: ["vi-vn"],
             thumbnail: "goctruyentranh.png",
@@ -469,7 +469,7 @@ class Parser {
             info.push(...categories);
             const item = { id, title, cover, info };
             const lastChapter = `Chương ${gallery.chapterLatest[0]}`;
-            const totalViews = `👁️ ${gallery.viewCount}`;
+            const totalViews = `${gallery.viewCount} views`;
             const subtitle = [totalViews, lastChapter].join(' • ');
             if (includeSubtitle) {
                 item.subtitle = subtitle;

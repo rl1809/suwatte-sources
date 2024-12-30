@@ -510,7 +510,7 @@ class Target {
         this.info = {
             id: "cmanga",
             website: constants_1.CMANGA_DOMAIN,
-            version: 0.3,
+            version: 0.4,
             name: "CManga",
             supportedLanguages: ["vi-vn"],
             thumbnail: "cmanga.png",
@@ -641,7 +641,7 @@ class Parser {
             info.push(...genres);
             const item = { id, title, cover, info };
             const lastChapter = `Chương ${gallery.info.chapter.last}`;
-            const totalViews = `👁️ ${(0, utils_1.numberWithDot)(gallery.info.statics.view)}`;
+            const totalViews = `${(0, utils_1.numberWithDot)(gallery.info.statics.view)} views`;
             const subtitle = [totalViews, lastChapter].join(' • ');
             if (includeSubtitle) {
                 item.subtitle = subtitle;
