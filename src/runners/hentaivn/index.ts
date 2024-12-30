@@ -30,7 +30,7 @@ export class Target
     info: RunnerInfo = {
         id: "hentaivn",
         website: HENTAIVN_DOMAIN,
-        version: 1.1,
+        version: 1.2,
         name: "HentaiVN",
         supportedLanguages: ["vi-vn"],
         thumbnail: "hentaivn.png",

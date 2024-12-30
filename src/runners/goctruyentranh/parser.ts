@@ -25,7 +25,7 @@ export class Parser {
             info.push(...categories)
             const item: Highlight = {id, title, cover, info}
             const lastChapter = `Chương ${gallery.chapterLatest[0]}`
-            const totalViews = `👁️ ${gallery.viewCount}`
+            const totalViews = `${gallery.viewCount} views`
             const subtitle = [totalViews, lastChapter].join(' • ')
             if (includeSubtitle) {
                 item.subtitle = subtitle;

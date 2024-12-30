@@ -23,7 +23,7 @@ export class Parser {
             const title = $(element).find('div.book_name.qtip').text().trim()
             const cover = $(element).find('a>img').attr('src') || ""
             const chapterStats = $('.text_detail', element).text().trim();
-            const totalViews = `👁️ ${chapterStats.split(" ").filter(element => element.trim() !== "")[1]}`
+            const totalViews = `${chapterStats.split(" ").filter(element => element.trim() !== "")[1]} views`
             const lastChapter = $(element).find("div.last_chapter>a").text()
             const subtitle = [totalViews, lastChapter].join(" • ")
             const item: Highlight = {id, title, cover}

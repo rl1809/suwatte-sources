@@ -18,7 +18,7 @@ export class Parser {
             info.push(...genres)
             const item: Highlight = {id, title, cover, info}
             const lastChapter = `Chương ${gallery.info.chapter.last}`
-            const totalViews = `👁️ ${numberWithDot(gallery.info.statics.view)}`
+            const totalViews = `${numberWithDot(gallery.info.statics.view)} views`
             const subtitle = [totalViews, lastChapter].join(' • ')
             if (includeSubtitle) {
                 item.subtitle = subtitle;

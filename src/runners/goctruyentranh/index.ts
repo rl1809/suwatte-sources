@@ -30,7 +30,7 @@ export class Target implements ContentSource,
     info: RunnerInfo = {
         id: "goctruyentranh",
         website: GOCTRUYENTRANH_DOMAIN,
-        version: 0.3,
+        version: 0.4,
         name: "GocTruyenTranh",
         supportedLanguages: ["vi-vn"],
         thumbnail: "goctruyentranh.png",

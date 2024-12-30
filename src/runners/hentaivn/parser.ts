@@ -323,7 +323,7 @@ export class Parser {
         const viewText = $('span.info:contains("Lượt xem:")').parent().text();
         const views = viewText.substring(viewText.indexOf('L')).split('\n')[0]?.slice(9).trim()
         if (views) {
-            info.push(`👁 ${views}`)
+            info.push(`${views} views`)
         }
         const pageLikeElement = $('div.page_like')
         const likes = pageLikeElement.find('div.but_like').text().trim()
