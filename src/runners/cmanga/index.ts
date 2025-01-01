@@ -41,7 +41,7 @@ export class Target
     info: RunnerInfo = {
         id: "cmanga",
         website: CMANGA_DOMAIN,
-        version: 0.4,
+        version: 0.5,
         name: "CManga",
         supportedLanguages: ["vi-vn"],
         thumbnail: "cmanga.png",

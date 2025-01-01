@@ -75,6 +75,7 @@ export class Controller {
                     break;
             }
         }
+        promises.push(this.api.updateOnline())
         await Promise.all(promises)
         const sectionIdInOrder = HOME_PAGE_SECTIONS.map((section) => {
             return section.id

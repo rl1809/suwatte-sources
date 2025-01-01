@@ -21,6 +21,7 @@ export function parseChapterImages(chapterImage: ChapterImage): string[] {
 export async function AuthInterceptor(request: NetworkRequest) {
     const sessionCookie = await SecureStore.string(CookieNameSession);
     const passwordCookie = await SecureStore.string(CookieNamePassword)
+    console.log(sessionCookie, passwordCookie)
     if (!sessionCookie || !passwordCookie) return request;
     request.headers = {
         ...request.headers,
@@ -40,19 +41,24 @@ export async function AuthInterceptor(request: NetworkRequest) {
     return request;
 }
 
-export const getCookieValue = (cookieArray: string[], cookieName: string): string | null => {
-    const cookieString = cookieArray.find(cookie => cookie.trim().startsWith(`${cookieName}=`));
-    if (!cookieString) {
-        return null;
-    }
-    const firstPart = cookieString.split(';')[0];
-    const keyValue = firstPart?.split('=');
-    if (!keyValue) {
-        return null
-    }
-    return keyValue.length > 1 ? keyValue.slice(1).join('=') : null;
-};
+export const getCookieValue = (setCookies: string, cookieName: string): string => {
+    if (!setCookies) return "";
+    const cookies = setCookies.split(/, ?/);
 
+    for (const cookie of cookies) {
+        let cleanedCookie = cookie;
+        if(cleanedCookie.startsWith('"')) {
+            cleanedCookie = cleanedCookie.substring(1);
+        }
+        const parts = cleanedCookie.split(";");
+        const [namePart, ...valueParts] = parts[0]?.split("=") || [];
+
+        if (namePart === cookieName) {
+            return valueParts.join("=");
+        }
+    }
+    return "";
+};
 
 export async function isLoggedIn(): Promise<boolean> {
     const userId = await SecureStore.string(UserId);

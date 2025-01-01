@@ -1,6 +1,6 @@
 import {DirectoryFilter, FilterType, Option, PageSection, PublicationStatus, SectionStyle,} from "@suwatte/daisuke";
 
-export const CMANGA_DOMAIN = "https://cmangaog.com";
+export const CMANGA_DOMAIN = "https://cmangam.com";
 
 export const API_LOGIN = "/assets/ajax/user.php"
 export const API_GET_USER_DATA = "/api/user_data"
@@ -42,21 +42,11 @@ export const HOME_PAGE_SECTIONS: PageSection[] = [
     {
         id: "suggest",
         title: "Gợi Ý Thông Minh",
-        style: SectionStyle.GALLERY,
-    },
-    {
-        id: "day",
-        title: "Top Ngày",
-        style: SectionStyle.GALLERY,
+        style: SectionStyle.INFO,
     },
     {
         id: "month",
         title: "Top Tháng",
-        style: SectionStyle.GALLERY,
-    },
-    {
-        id: "total",
-        title: "Top Tổng",
         style: SectionStyle.GALLERY,
     },
     {
