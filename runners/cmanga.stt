@@ -30,27 +30,31 @@ class API {
         };
         console.log(`Performing a request: ${JSON.stringify(request)}`);
         const response = await this.client.request(request);
-        console.log(response);
-        // const setCookies = response.headers['set-cookie']
-        const setCookies = [
-            "PHPSESSID=065ah2d2a1hdrakic50d49bufg; path=/",
-            "login_email=token_login; expires=Sun, 15-Jun-2025 04:03:29 GMT; Max-Age=31536000; path=/",
-            "login_password=%7B%22ciphertext%22%3A%221oJ0vBrJTto52orWMmsDU%2BzmDJCAYJJufrLFHTUdTmDJHwv%5C%2F4%5C%2FOzn%2BveuhhVIimTuzHIiVzOWyvm9xmoVCL9runID3cuQN%5C%2FWmNxhWCxPFR76Kl8xHfKPz66%2BGhxBi2nUuN0hYZJvA8lhsZhG%5C%2FMYt24yhXcB1oq5q%2BgUsl95HJNM%3D%22%2C%22iv%22%3A%2270dd498334aae2a89b7f2631e7777f02%22%2C%22salt%22%3A%22e48107fa9654abc3acb6bf82ceff9ea881c62577412395437f3c726faa8af76f41e9ad8941ff732dcf6044c46b7ec842e69df5fbd110ae889bb0fc9e10fb2f6d805cf7eecd7d42a76d54a0fa4f88077e606c33030a02d98f1046aaaacc564568d55a9118c2e6201128fb5feffe007fd526dc8dc120e236eb11afc9183e634415e664c93f79b4b700b11297dc4bd6c8543fa43eb68165561f751d98cbad3c54fa98fca5ceba2454171fc90a2949bac3e897a75dcb29acf715880db8117ac72f202d769e6f7675ef5e5bb56234ed7a74756e32b641c0c14295ae6f8a396b79cece3364da70dce8bc0f2cc2112042a2fe1ac910182fe604528020330d7ace83d437%22%7D; expires=Sun, 15-Jun-2025 04:03:29 GMT; Max-Age=31536000; path=/"
+        const setCookies = response.headers['Set-Cookie'];
+        const sessionCookie = (0, utils_1.getCookieValue)(setCookies, constants_1.CookieNameSession);
+        const passwordCookie = (0, utils_1.getCookieValue)(setCookies, constants_1.CookieNamePassword);
+        const cookies = [
+            {
+                name: constants_1.CookieNameSession,
+                value: sessionCookie
+            },
+            {
+                name: constants_1.CookieNamePassword,
+                value: passwordCookie,
+            }
         ];
-        const sessionCookie = (0, utils_1.getCookieValue)(setCookies, constants_1.CookieNameSession) || "";
-        const passwordCookie = (0, utils_1.getCookieValue)(setCookies, constants_1.CookieNamePassword) || "";
-        const userId = await this.getUserId(sessionCookie, passwordCookie);
-        const userData = await this.getUserData(userId);
+        const userId = await this.getUserId(cookies);
+        const userData = await this.getUserData(userId, cookies);
         await SecureStore.set(constants_1.UserId, userId);
         await SecureStore.set(constants_1.UserName, userData.name);
         await SecureStore.set(constants_1.Avatar, userData.avatar);
         await SecureStore.set(constants_1.CookieNameSession, sessionCookie);
         await SecureStore.set(constants_1.CookieNamePassword, passwordCookie);
     }
-    async getUserData(userId) {
+    async getUserData(userId, cookies) {
         const domain = await store_1.GlobalStore.getDomain();
         const url = `${domain}${constants_1.API_GET_USER_DATA}?data=info&user=${userId}`;
-        return this.requestJSON({ url, method: "GET" });
+        return this.requestJSON({ url, method: "GET", cookies: cookies });
     }
     async getGalleryInfo(galleryId) {
         const domain = await store_1.GlobalStore.getDomain();
@@ -97,7 +101,7 @@ class API {
     }
     async getSearchGalleries(keyword) {
         const domain = await store_1.GlobalStore.getDomain();
-        const url = `${domain + constants_1.API_SEARCH}?string=${keyword}`;
+        const url = `${domain + constants_1.API_SEARCH}?string=${encodeURI(keyword)}`;
         const galleries = await this.requestJSON({ url, method: "GET" });
         return (0, utils_1.parseGalleries)(galleries);
     }
@@ -127,19 +131,8 @@ class API {
         const url = domain + constants_1.API_GET_TAGS;
         return this.requestJSON({ url, method: "GET" });
     }
-    async getUserId(sessionCookie, passwordCookie) {
-        const $ = await this.fetchHTML(await store_1.GlobalStore.getDomain(), {
-            cookies: [
-                {
-                    name: constants_1.CookieNameSession,
-                    value: sessionCookie
-                },
-                {
-                    name: constants_1.CookieNamePassword,
-                    value: passwordCookie
-                },
-            ]
-        });
+    async getUserId(cookies) {
+        const $ = await this.fetchHTML(await store_1.GlobalStore.getDomain(), { cookies: cookies });
         const scriptTag = $('script:contains("token_user")');
         let userId = '';
         if (scriptTag.length > 0) {
@@ -170,7 +163,6 @@ class API {
         };
         console.log(`Performing a request: ${JSON.stringify(request)}`);
         await this.client.request(request);
-        return;
     }
     async followManga(contentId) {
         const domain = await store_1.GlobalStore.getDomain();
@@ -189,7 +181,22 @@ class API {
         };
         console.log(`Performing a request: ${JSON.stringify(request)}`);
         await this.client.request(request);
-        return;
+    }
+    async updateOnline() {
+        const domain = await store_1.GlobalStore.getDomain();
+        const request = {
+            url: domain + constants_1.API_USER_OPERATION,
+            headers: {
+                "content-type": "application/x-www-form-urlencoded",
+                "x-requested-with": "XMLHttpRequest"
+            },
+            body: {
+                action: "update_online"
+            },
+            method: "POST"
+        };
+        console.log(`Performing a request: ${JSON.stringify(request)}`);
+        await this.client.request(request);
     }
     async fetchHTML(url, config) {
         console.log(`Requesting to the url: ${url}${config ? ", config: " + JSON.stringify(config) : ""}`);
@@ -231,7 +238,7 @@ async function getGalleryFromCheerio($) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.USER_LIST = exports.DEFAULT_FILTERS = exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.PREF_KEYS = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.BATCH_SIZE_GET_CHAPTER_LIST = exports.CookieNamePassword = exports.CookieNameSession = exports.Avatar = exports.UserName = exports.UserId = exports.API_GET_TAGS = exports.API_SEARCH = exports.API_CHAPTER_IMAGE = exports.API_CHAPTER_LIST = exports.API_HOME_ALBUM_TOP = exports.API_HOME_ALBUM_LIST = exports.API_ALBUM_SUGGEST = exports.API_GET_USER_LIST = exports.API_USER_OPERATION = exports.API_GET_USER_DATA = exports.API_LOGIN = exports.CMANGA_DOMAIN = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
-exports.CMANGA_DOMAIN = "https://cmangaog.com";
+exports.CMANGA_DOMAIN = "https://cmangam.com";
 exports.API_LOGIN = "/assets/ajax/user.php";
 exports.API_GET_USER_DATA = "/api/user_data";
 exports.API_USER_OPERATION = "/assets/ajax/user.php";
@@ -262,21 +269,11 @@ exports.HOME_PAGE_SECTIONS = [
     {
         id: "suggest",
         title: "Gợi Ý Thông Minh",
-        style: daisuke_1.SectionStyle.GALLERY,
-    },
-    {
-        id: "day",
-        title: "Top Ngày",
-        style: daisuke_1.SectionStyle.GALLERY,
+        style: daisuke_1.SectionStyle.INFO,
     },
     {
         id: "month",
         title: "Top Tháng",
-        style: daisuke_1.SectionStyle.GALLERY,
-    },
-    {
-        id: "total",
-        title: "Top Tổng",
         style: daisuke_1.SectionStyle.GALLERY,
     },
     {
@@ -383,6 +380,7 @@ class Controller {
                     break;
             }
         }
+        promises.push(this.api.updateOnline());
         await Promise.all(promises);
         const sectionIdInOrder = constants_1.HOME_PAGE_SECTIONS.map((section) => {
             return section.id;
@@ -510,7 +508,7 @@ class Target {
         this.info = {
             id: "cmanga",
             website: constants_1.CMANGA_DOMAIN,
-            version: 0.4,
+            version: 0.5,
             name: "CManga",
             supportedLanguages: ["vi-vn"],
             thumbnail: "cmanga.png",
@@ -771,6 +769,7 @@ exports.parseChapterImages = parseChapterImages;
 async function AuthInterceptor(request) {
     const sessionCookie = await SecureStore.string(constants_1.CookieNameSession);
     const passwordCookie = await SecureStore.string(constants_1.CookieNamePassword);
+    console.log(sessionCookie, passwordCookie);
     if (!sessionCookie || !passwordCookie)
         return request;
     request.headers = {
@@ -790,17 +789,22 @@ async function AuthInterceptor(request) {
     return request;
 }
 exports.AuthInterceptor = AuthInterceptor;
-const getCookieValue = (cookieArray, cookieName) => {
-    const cookieString = cookieArray.find(cookie => cookie.trim().startsWith(`${cookieName}=`));
-    if (!cookieString) {
-        return null;
+const getCookieValue = (setCookies, cookieName) => {
+    if (!setCookies)
+        return "";
+    const cookies = setCookies.split(/, ?/);
+    for (const cookie of cookies) {
+        let cleanedCookie = cookie;
+        if (cleanedCookie.startsWith('"')) {
+            cleanedCookie = cleanedCookie.substring(1);
+        }
+        const parts = cleanedCookie.split(";");
+        const [namePart, ...valueParts] = parts[0]?.split("=") || [];
+        if (namePart === cookieName) {
+            return valueParts.join("=");
+        }
     }
-    const firstPart = cookieString.split(';')[0];
-    const keyValue = firstPart?.split('=');
-    if (!keyValue) {
-        return null;
-    }
-    return keyValue.length > 1 ? keyValue.slice(1).join('=') : null;
+    return "";
 };
 exports.getCookieValue = getCookieValue;
 async function isLoggedIn() {
