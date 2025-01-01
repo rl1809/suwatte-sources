@@ -46,6 +46,7 @@ export class Controller {
                     )
                     break;
                 case "update":
+                case "unique":
                     promises.push(this.api.getGalleryList(
                             {
                                 num_chapter: 0,

@@ -45,6 +45,11 @@ export const HOME_PAGE_SECTIONS: PageSection[] = [
         style: SectionStyle.INFO,
     },
     {
+        id: "unique",
+        title: "Độc Quyền",
+        style: SectionStyle.GALLERY,
+    },
+    {
         id: "month",
         title: "Top Tháng",
         style: SectionStyle.GALLERY,
