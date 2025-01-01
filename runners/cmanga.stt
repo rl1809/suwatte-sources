@@ -272,6 +272,11 @@ exports.HOME_PAGE_SECTIONS = [
         style: daisuke_1.SectionStyle.INFO,
     },
     {
+        id: "unique",
+        title: "Độc Quyền",
+        style: daisuke_1.SectionStyle.GALLERY,
+    },
+    {
         id: "month",
         title: "Top Tháng",
         style: daisuke_1.SectionStyle.GALLERY,
@@ -356,6 +361,7 @@ class Controller {
                     }));
                     break;
                 case "update":
+                case "unique":
                     promises.push(this.api.getGalleryList({
                         num_chapter: 0,
                         sort: section.id,
@@ -508,7 +514,7 @@ class Target {
         this.info = {
             id: "cmanga",
             website: constants_1.CMANGA_DOMAIN,
-            version: 0.5,
+            version: 0.6,
             name: "CManga",
             supportedLanguages: ["vi-vn"],
             thumbnail: "cmanga.png",
@@ -769,7 +775,6 @@ exports.parseChapterImages = parseChapterImages;
 async function AuthInterceptor(request) {
     const sessionCookie = await SecureStore.string(constants_1.CookieNameSession);
     const passwordCookie = await SecureStore.string(constants_1.CookieNamePassword);
-    console.log(sessionCookie, passwordCookie);
     if (!sessionCookie || !passwordCookie)
         return request;
     request.headers = {
