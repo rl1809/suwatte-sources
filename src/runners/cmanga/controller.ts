@@ -9,16 +9,7 @@ import {
     PageSection,
     User
 } from "@suwatte/daisuke";
-import {
-    Avatar,
-    CookieNamePassword,
-    CookieNameSession,
-    DEFAULT_FILTERS,
-    HOME_PAGE_SECTIONS,
-    PREF_KEYS,
-    UserId,
-    UserName
-} from "./constants";
+import {Avatar, DEFAULT_FILTERS, HOME_PAGE_SECTIONS, Name, PREF_KEYS, UserId} from "./constants";
 import {Parser} from "./parser";
 import {API} from "./api";
 import memoryCache, {CacheClass} from "memory-cache";
@@ -76,7 +67,7 @@ export class Controller {
                     break;
             }
         }
-        promises.push(this.api.updateOnline())
+        promises.push(this.api.handleAuth())
         await Promise.all(promises)
         const sectionIdInOrder = HOME_PAGE_SECTIONS.map((section) => {
             return section.id
@@ -179,8 +170,6 @@ export class Controller {
 
     async handleSignOut() {
         await SecureStore.remove(UserId)
-        await SecureStore.remove(CookieNameSession);
-        await SecureStore.remove(CookieNamePassword);
     }
 
     async getAuthUser() {
@@ -190,7 +179,7 @@ export class Controller {
             return null;
         }
 
-        const name = await SecureStore.string(UserName) || "";
+        const name = await SecureStore.string(Name) || "";
         const avatar = `${domain}/assets/tmp/avatar/${await SecureStore.string(Avatar) || ""}`
 
         const user: User = {

@@ -15,12 +15,12 @@ export const API_SEARCH = "/api/search"
 export const API_GET_TAGS = "/api/data?data=album_tags"
 
 export const UserId = "user_id"
+export const Name = "name"
+
 export const UserName = "user_name"
+export const Password = "password"
 
 export const Avatar = "avatar"
-
-export const CookieNameSession = "PHPSESSID"
-export const CookieNamePassword = "login_password"
 
 
 export const BATCH_SIZE_GET_CHAPTER_LIST = 500

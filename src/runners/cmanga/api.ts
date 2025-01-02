@@ -1,4 +1,4 @@
-import {Cookie, NetworkClientBuilder, NetworkRequest, NetworkRequestConfig} from "@suwatte/daisuke";
+import {NetworkRequest, NetworkRequestConfig} from "@suwatte/daisuke";
 import {
     API_ALBUM_SUGGEST,
     API_CHAPTER_IMAGE,
@@ -13,23 +13,29 @@ import {
     API_USER_OPERATION,
     Avatar,
     BATCH_SIZE_GET_CHAPTER_LIST,
-    CookieNamePassword,
-    CookieNameSession,
+    Name,
+    Password,
     UserId,
     UserName
 } from "./constants";
 import {CheerioAPI, load} from "cheerio";
-import {AuthInterceptor, getCookieValue, parseChapterImages, parseChapters, parseGalleries} from "./utils";
+import {parseChapterImages, parseChapters, parseGalleries} from "./utils";
 import {GlobalStore} from "./store";
 import {ChapterImage, ChapterInfo, Gallery, GalleryInfo, Genre, GetGalleryListRequest, UserData} from "./type";
 
 export class API {
-    private client = new NetworkClientBuilder()
-        .addRequestInterceptor(AuthInterceptor)
-        .build();
+    private client = new NetworkClient()
 
-    async handleAuth(username: string, password: string) {
+    async handleAuth(username?: string | null, password?: string | null) {
         const domain = await GlobalStore.getDomain();
+        if (!username || !password) {
+            username = await SecureStore.string(UserName)
+            password = await SecureStore.string(Password)
+        }
+        if (!username || !password) {
+            return
+        }
+
         const request = {
             url: domain + API_LOGIN,
             headers: {
@@ -44,33 +50,20 @@ export class API {
             method: "POST"
         }
         console.log(`Performing a request: ${JSON.stringify(request)}`)
-        const response = await this.client.request(request)
-        const setCookies = response.headers['Set-Cookie']
-        const sessionCookie = getCookieValue(setCookies, CookieNameSession)
-        const passwordCookie = getCookieValue(setCookies, CookieNamePassword)
-        const cookies = [
-            {
-                name: CookieNameSession,
-                value: sessionCookie
-            },
-            {
-                name: CookieNamePassword,
-                value: passwordCookie,
-            }
-        ]
-        const userId = await this.getUserId(cookies)
-        const userData = await this.getUserData(userId, cookies)
+        await this.client.request(request)
+        const userId = await this.getUserId()
+        const userData = await this.getUserData(userId)
+        await SecureStore.set(UserName, username)
+        await SecureStore.set(Password, password)
         await SecureStore.set(UserId, userId)
-        await SecureStore.set(UserName, userData.name)
+        await SecureStore.set(Name, userData.name)
         await SecureStore.set(Avatar, userData.avatar)
-        await SecureStore.set(CookieNameSession, sessionCookie);
-        await SecureStore.set(CookieNamePassword, passwordCookie);
     }
 
-    async getUserData(userId: string, cookies: Cookie[]): Promise<UserData> {
+    async getUserData(userId: string): Promise<UserData> {
         const domain = await GlobalStore.getDomain()
         const url = `${domain}${API_GET_USER_DATA}?data=info&user=${userId}`
-        return this.requestJSON({url, method: "GET", cookies:cookies});
+        return this.requestJSON({url, method: "GET"});
     }
 
     async getGalleryInfo(galleryId: string): Promise<GalleryInfo> {
@@ -162,8 +155,8 @@ export class API {
         return this.requestJSON({url, method: "GET"});
     }
 
-    async getUserId(cookies: Cookie[]) {
-        const $ = await this.fetchHTML(await GlobalStore.getDomain(), {cookies: cookies})
+    async getUserId() {
+        const $ = await this.fetchHTML(await GlobalStore.getDomain())
         const scriptTag = $('script:contains("token_user")');
         let userId = '';
         if (scriptTag.length > 0) {
@@ -209,23 +202,6 @@ export class API {
                 action: "album_follow",
                 album: contentId,
                 follow_check: 1,
-            },
-            method: "POST"
-        }
-        console.log(`Performing a request: ${JSON.stringify(request)}`)
-        await this.client.request(request)
-    }
-
-    async updateOnline() {
-        const domain = await GlobalStore.getDomain()
-        const request = {
-            url: domain + API_USER_OPERATION,
-            headers: {
-                "content-type": "application/x-www-form-urlencoded",
-                "x-requested-with": "XMLHttpRequest"
-            },
-            body: {
-                action: "update_online"
             },
             method: "POST"
         }
