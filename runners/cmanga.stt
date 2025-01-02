@@ -2,19 +2,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.API = void 0;
-const daisuke_1 = require("@suwatte/daisuke");
 const constants_1 = require("./constants");
 const cheerio_1 = require("cheerio");
 const utils_1 = require("./utils");
 const store_1 = require("./store");
 class API {
     constructor() {
-        this.client = new daisuke_1.NetworkClientBuilder()
-            .addRequestInterceptor(utils_1.AuthInterceptor)
-            .build();
+        this.client = new NetworkClient();
     }
     async handleAuth(username, password) {
         const domain = await store_1.GlobalStore.getDomain();
+        if (!username || !password) {
+            username = await SecureStore.string(constants_1.UserName);
+            password = await SecureStore.string(constants_1.Password);
+        }
+        if (!username || !password) {
+            return;
+        }
         const request = {
             url: domain + constants_1.API_LOGIN,
             headers: {
@@ -29,32 +33,19 @@ class API {
             method: "POST"
         };
         console.log(`Performing a request: ${JSON.stringify(request)}`);
-        const response = await this.client.request(request);
-        const setCookies = response.headers['Set-Cookie'];
-        const sessionCookie = (0, utils_1.getCookieValue)(setCookies, constants_1.CookieNameSession);
-        const passwordCookie = (0, utils_1.getCookieValue)(setCookies, constants_1.CookieNamePassword);
-        const cookies = [
-            {
-                name: constants_1.CookieNameSession,
-                value: sessionCookie
-            },
-            {
-                name: constants_1.CookieNamePassword,
-                value: passwordCookie,
-            }
-        ];
-        const userId = await this.getUserId(cookies);
-        const userData = await this.getUserData(userId, cookies);
+        await this.client.request(request);
+        const userId = await this.getUserId();
+        const userData = await this.getUserData(userId);
+        await SecureStore.set(constants_1.UserName, username);
+        await SecureStore.set(constants_1.Password, password);
         await SecureStore.set(constants_1.UserId, userId);
-        await SecureStore.set(constants_1.UserName, userData.name);
+        await SecureStore.set(constants_1.Name, userData.name);
         await SecureStore.set(constants_1.Avatar, userData.avatar);
-        await SecureStore.set(constants_1.CookieNameSession, sessionCookie);
-        await SecureStore.set(constants_1.CookieNamePassword, passwordCookie);
     }
-    async getUserData(userId, cookies) {
+    async getUserData(userId) {
         const domain = await store_1.GlobalStore.getDomain();
         const url = `${domain}${constants_1.API_GET_USER_DATA}?data=info&user=${userId}`;
-        return this.requestJSON({ url, method: "GET", cookies: cookies });
+        return this.requestJSON({ url, method: "GET" });
     }
     async getGalleryInfo(galleryId) {
         const domain = await store_1.GlobalStore.getDomain();
@@ -131,8 +122,8 @@ class API {
         const url = domain + constants_1.API_GET_TAGS;
         return this.requestJSON({ url, method: "GET" });
     }
-    async getUserId(cookies) {
-        const $ = await this.fetchHTML(await store_1.GlobalStore.getDomain(), { cookies: cookies });
+    async getUserId() {
+        const $ = await this.fetchHTML(await store_1.GlobalStore.getDomain());
         const scriptTag = $('script:contains("token_user")');
         let userId = '';
         if (scriptTag.length > 0) {
@@ -182,22 +173,6 @@ class API {
         console.log(`Performing a request: ${JSON.stringify(request)}`);
         await this.client.request(request);
     }
-    async updateOnline() {
-        const domain = await store_1.GlobalStore.getDomain();
-        const request = {
-            url: domain + constants_1.API_USER_OPERATION,
-            headers: {
-                "content-type": "application/x-www-form-urlencoded",
-                "x-requested-with": "XMLHttpRequest"
-            },
-            body: {
-                action: "update_online"
-            },
-            method: "POST"
-        };
-        console.log(`Performing a request: ${JSON.stringify(request)}`);
-        await this.client.request(request);
-    }
     async fetchHTML(url, config) {
         console.log(`Requesting to the url: ${url}${config ? ", config: " + JSON.stringify(config) : ""}`);
         const response = await this.client.get(url, config);
@@ -233,10 +208,10 @@ async function getGalleryFromCheerio($) {
     return { title, cover, status, tags, views, follows, description, last_update };
 }
 
-},{"./constants":2,"./store":6,"./utils":7,"@suwatte/daisuke":9,"cheerio":undefined}],2:[function(require,module,exports){
+},{"./constants":2,"./store":6,"./utils":7,"cheerio":undefined}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.USER_LIST = exports.DEFAULT_FILTERS = exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.PREF_KEYS = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.BATCH_SIZE_GET_CHAPTER_LIST = exports.CookieNamePassword = exports.CookieNameSession = exports.Avatar = exports.UserName = exports.UserId = exports.API_GET_TAGS = exports.API_SEARCH = exports.API_CHAPTER_IMAGE = exports.API_CHAPTER_LIST = exports.API_HOME_ALBUM_TOP = exports.API_HOME_ALBUM_LIST = exports.API_ALBUM_SUGGEST = exports.API_GET_USER_LIST = exports.API_USER_OPERATION = exports.API_GET_USER_DATA = exports.API_LOGIN = exports.CMANGA_DOMAIN = void 0;
+exports.USER_LIST = exports.DEFAULT_FILTERS = exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.PREF_KEYS = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.BATCH_SIZE_GET_CHAPTER_LIST = exports.Avatar = exports.Password = exports.UserName = exports.Name = exports.UserId = exports.API_GET_TAGS = exports.API_SEARCH = exports.API_CHAPTER_IMAGE = exports.API_CHAPTER_LIST = exports.API_HOME_ALBUM_TOP = exports.API_HOME_ALBUM_LIST = exports.API_ALBUM_SUGGEST = exports.API_GET_USER_LIST = exports.API_USER_OPERATION = exports.API_GET_USER_DATA = exports.API_LOGIN = exports.CMANGA_DOMAIN = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 exports.CMANGA_DOMAIN = "https://cmangam.com";
 exports.API_LOGIN = "/assets/ajax/user.php";
@@ -251,10 +226,10 @@ exports.API_CHAPTER_IMAGE = "/api/chapter_image";
 exports.API_SEARCH = "/api/search";
 exports.API_GET_TAGS = "/api/data?data=album_tags";
 exports.UserId = "user_id";
+exports.Name = "user_name";
 exports.UserName = "user_name";
+exports.Password = "password";
 exports.Avatar = "avatar";
-exports.CookieNameSession = "PHPSESSID";
-exports.CookieNamePassword = "login_password";
 exports.BATCH_SIZE_GET_CHAPTER_LIST = 500;
 exports.STATUS_KEYS = {
     "Đang Cập Nhật": daisuke_1.PublicationStatus.ONGOING,
@@ -386,7 +361,7 @@ class Controller {
                     break;
             }
         }
-        promises.push(this.api.updateOnline());
+        promises.push(this.api.handleAuth());
         await Promise.all(promises);
         const sectionIdInOrder = constants_1.HOME_PAGE_SECTIONS.map((section) => {
             return section.id;
@@ -474,8 +449,6 @@ class Controller {
     }
     async handleSignOut() {
         await SecureStore.remove(constants_1.UserId);
-        await SecureStore.remove(constants_1.CookieNameSession);
-        await SecureStore.remove(constants_1.CookieNamePassword);
     }
     async getAuthUser() {
         const domain = await store_1.GlobalStore.getDomain();
@@ -483,7 +456,7 @@ class Controller {
         if (!userId) {
             return null;
         }
-        const name = await SecureStore.string(constants_1.UserName) || "";
+        const name = await SecureStore.string(constants_1.Name) || "";
         const avatar = `${domain}/assets/tmp/avatar/${await SecureStore.string(constants_1.Avatar) || ""}`;
         const user = {
             handle: name,
@@ -754,8 +727,7 @@ exports.GlobalStore = new Store();
 },{"./constants":2}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isLoggedIn = exports.getCookieValue = exports.AuthInterceptor = exports.parseChapterImages = exports.parseChapters = exports.parseGalleries = void 0;
-const store_1 = require("./store");
+exports.isLoggedIn = exports.parseChapterImages = exports.parseChapters = exports.parseGalleries = void 0;
 const constants_1 = require("./constants");
 function parseGalleries(galleries) {
     return galleries.map((gallery) => ({
@@ -772,53 +744,13 @@ function parseChapterImages(chapterImage) {
     return chapterImage.image;
 }
 exports.parseChapterImages = parseChapterImages;
-async function AuthInterceptor(request) {
-    const sessionCookie = await SecureStore.string(constants_1.CookieNameSession);
-    const passwordCookie = await SecureStore.string(constants_1.CookieNamePassword);
-    if (!sessionCookie || !passwordCookie)
-        return request;
-    request.headers = {
-        ...request.headers,
-        referer: await store_1.GlobalStore.getDomain(),
-    };
-    request.cookies = [
-        {
-            name: constants_1.CookieNameSession,
-            value: sessionCookie
-        },
-        {
-            name: constants_1.CookieNamePassword,
-            value: passwordCookie
-        },
-    ];
-    return request;
-}
-exports.AuthInterceptor = AuthInterceptor;
-const getCookieValue = (setCookies, cookieName) => {
-    if (!setCookies)
-        return "";
-    const cookies = setCookies.split(/, ?/);
-    for (const cookie of cookies) {
-        let cleanedCookie = cookie;
-        if (cleanedCookie.startsWith('"')) {
-            cleanedCookie = cleanedCookie.substring(1);
-        }
-        const parts = cleanedCookie.split(";");
-        const [namePart, ...valueParts] = parts[0]?.split("=") || [];
-        if (namePart === cookieName) {
-            return valueParts.join("=");
-        }
-    }
-    return "";
-};
-exports.getCookieValue = getCookieValue;
 async function isLoggedIn() {
     const userId = await SecureStore.string(constants_1.UserId);
     return userId != null;
 }
 exports.isLoggedIn = isLoggedIn;
 
-},{"./constants":2,"./store":6}],8:[function(require,module,exports){
+},{"./constants":2}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startCase = exports.numberWithDot = exports.isNumber = void 0;
