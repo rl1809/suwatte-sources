@@ -226,7 +226,7 @@ exports.API_CHAPTER_IMAGE = "/api/chapter_image";
 exports.API_SEARCH = "/api/search";
 exports.API_GET_TAGS = "/api/data?data=album_tags";
 exports.UserId = "user_id";
-exports.Name = "user_name";
+exports.Name = "name";
 exports.UserName = "user_name";
 exports.Password = "password";
 exports.Avatar = "avatar";
