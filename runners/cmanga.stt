@@ -49,8 +49,9 @@ class API {
     }
     async getGalleryInfo(galleryId) {
         const domain = await store_1.GlobalStore.getDomain();
-        const $ = await this.fetchHTML(`${domain}/album/${galleryId}`);
-        return getGalleryFromCheerio($);
+        const url = `${domain + constants_1.API_GET_GALLERY_INFO}?id=${galleryId}&table=album&data=info`;
+        const response = await this.requestJSON({ url, method: "GET" });
+        return (0, utils_1.parseGallery)(response);
     }
     async getGalleryList(request) {
         const domain = await store_1.GlobalStore.getDomain();
@@ -192,26 +193,11 @@ class API {
     }
 }
 exports.API = API;
-async function getGalleryFromCheerio($) {
-    const domain = await store_1.GlobalStore.getDomain();
-    const title = $('p[itemprop="name"]').text().trim();
-    const cover = domain + $('img[itemprop="image"]').attr('src');
-    const tags = [];
-    $('.kind span a[itemprop="genre"]').each((_, element) => {
-        tags.push($(element).text().trim());
-    });
-    const status = $('.status').text().trim();
-    const views = $('.total_view').text().trim();
-    const follows = $('.bookmark').text().trim();
-    const description = $('div#book_detail').text().trim();
-    const last_update = $('.last_update').text().trim();
-    return { title, cover, status, tags, views, follows, description, last_update };
-}
 
 },{"./constants":2,"./store":6,"./utils":7,"cheerio":undefined}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.USER_LIST = exports.DEFAULT_FILTERS = exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.PREF_KEYS = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.BATCH_SIZE_GET_CHAPTER_LIST = exports.Avatar = exports.Password = exports.UserName = exports.Name = exports.UserId = exports.API_GET_TAGS = exports.API_SEARCH = exports.API_CHAPTER_IMAGE = exports.API_CHAPTER_LIST = exports.API_HOME_ALBUM_TOP = exports.API_HOME_ALBUM_LIST = exports.API_ALBUM_SUGGEST = exports.API_GET_USER_LIST = exports.API_USER_OPERATION = exports.API_GET_USER_DATA = exports.API_LOGIN = exports.CMANGA_DOMAIN = void 0;
+exports.USER_LIST = exports.DEFAULT_FILTERS = exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.PREF_KEYS = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.BATCH_SIZE_GET_CHAPTER_LIST = exports.Avatar = exports.Password = exports.UserName = exports.Name = exports.UserId = exports.API_GET_GALLERY_INFO = exports.API_GET_TAGS = exports.API_SEARCH = exports.API_CHAPTER_IMAGE = exports.API_CHAPTER_LIST = exports.API_HOME_ALBUM_TOP = exports.API_HOME_ALBUM_LIST = exports.API_ALBUM_SUGGEST = exports.API_GET_USER_LIST = exports.API_USER_OPERATION = exports.API_GET_USER_DATA = exports.API_LOGIN = exports.CMANGA_DOMAIN = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 exports.CMANGA_DOMAIN = "https://cmangam.com";
 exports.API_LOGIN = "/assets/ajax/user.php";
@@ -225,6 +211,7 @@ exports.API_CHAPTER_LIST = "/api/chapter_list";
 exports.API_CHAPTER_IMAGE = "/api/chapter_image";
 exports.API_SEARCH = "/api/search";
 exports.API_GET_TAGS = "/api/data?data=album_tags";
+exports.API_GET_GALLERY_INFO = "/api/get_data_by_id";
 exports.UserId = "user_id";
 exports.Name = "name";
 exports.UserName = "user_name";
@@ -232,10 +219,10 @@ exports.Password = "password";
 exports.Avatar = "avatar";
 exports.BATCH_SIZE_GET_CHAPTER_LIST = 500;
 exports.STATUS_KEYS = {
-    "Đang Cập Nhật": daisuke_1.PublicationStatus.ONGOING,
-    "Hoàn Thành": daisuke_1.PublicationStatus.COMPLETED,
+    "doing": daisuke_1.PublicationStatus.ONGOING,
+    "completed": daisuke_1.PublicationStatus.COMPLETED,
 };
-exports.VERTICAL_TYPES = ["Manhwa", "Manhua", "Truyện Màu", "Webtoon", "Huyền Huyễn"];
+exports.VERTICAL_TYPES = ["manhwa", "manhua", "truyện màu", "webtoon", "huyền huyễn"];
 exports.PREF_KEYS = {
     cache_request: "request",
     domain: "domain",
@@ -425,8 +412,6 @@ class Controller {
     }
     // Content
     async getContent(contentId) {
-        const domain = await store_1.GlobalStore.getDomain();
-        const webUrl = `${domain}/album/${contentId}`;
         const pagePromises = [];
         pagePromises.push(this.api.getGalleryInfo(contentId));
         for (let i = 1; i <= 10; i++) {
@@ -438,7 +423,7 @@ class Controller {
         galleryInfoWithChapters.slice(1).forEach(chaptersPage => {
             chapters.push(...chaptersPage);
         });
-        return this.parser.getContent(galleryInfo, chapters, webUrl);
+        return this.parser.getContent(galleryInfo, chapters);
     }
     async getChapterData(chapterId) {
         const chapterImages = await this.api.getChapterImages(chapterId);
@@ -448,7 +433,11 @@ class Controller {
         await this.api.handleAuth(username, password);
     }
     async handleSignOut() {
+        await SecureStore.remove(constants_1.UserName);
+        await SecureStore.remove(constants_1.Password);
         await SecureStore.remove(constants_1.UserId);
+        await SecureStore.remove(constants_1.Name);
+        await SecureStore.remove(constants_1.Avatar);
     }
     async getAuthUser() {
         const domain = await store_1.GlobalStore.getDomain();
@@ -627,10 +616,12 @@ class Parser {
         }
         return items;
     }
-    async getContent(gallery, chapterInfos, webUrl) {
-        const title = gallery.title;
-        const summary = gallery.description;
-        const cover = gallery.cover;
+    async getContent(gallery, chapterInfos) {
+        const domain = await store_1.GlobalStore.getDomain();
+        const title = gallery.name;
+        const summary = gallery.detail;
+        const cover = `${domain}/assets/tmp/album/${gallery.avatar}`;
+        const webUrl = `${domain}${gallery.url}`;
         const status = constants_1.STATUS_KEYS[gallery.status] || daisuke_1.PublicationStatus.ONGOING;
         const chapters = this.getChapters(chapterInfos);
         const properties = [];
@@ -644,11 +635,11 @@ class Parser {
         properties.push({
             id: "genres",
             title: "Genres",
-            tags: gallery.tags.map(tag => ({ id: tag.toLowerCase(), title: tag })),
+            tags: gallery.tags.map(tag => ({ id: tag, title: (0, utils_1.startCase)(tag) })),
         });
         const info = [
-            `👁️ Lượt xem: ${(0, utils_1.numberWithDot)(gallery.views)}`,
-            `📚  Lượt theo dõi: ${(0, utils_1.numberWithDot)(gallery.follows)}`,
+            `👁️ Lượt xem: ${(0, utils_1.numberWithDot)(gallery.statics.view)}`,
+            `📚  Lượt theo dõi: ${(0, utils_1.numberWithDot)(gallery.statics.follow)}`,
         ];
         return {
             title,
@@ -727,7 +718,7 @@ exports.GlobalStore = new Store();
 },{"./constants":2}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isLoggedIn = exports.parseChapterImages = exports.parseChapters = exports.parseGalleries = void 0;
+exports.isLoggedIn = exports.parseChapterImages = exports.parseGallery = exports.parseChapters = exports.parseGalleries = void 0;
 const constants_1 = require("./constants");
 function parseGalleries(galleries) {
     return galleries.map((gallery) => ({
@@ -740,6 +731,10 @@ function parseChapters(chapters) {
     return chapters.map((chapter) => JSON.parse(String(chapter.info)));
 }
 exports.parseChapters = parseChapters;
+function parseGallery(gallery) {
+    return JSON.parse(String(gallery.info));
+}
+exports.parseGallery = parseGallery;
 function parseChapterImages(chapterImage) {
     return chapterImage.image;
 }
