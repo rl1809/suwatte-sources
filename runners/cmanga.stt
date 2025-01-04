@@ -49,9 +49,15 @@ class API {
     }
     async getGalleryInfo(galleryId) {
         const domain = await store_1.GlobalStore.getDomain();
-        const url = `${domain + constants_1.API_GET_GALLERY_INFO}?id=${galleryId}&table=album&data=info`;
+        const url = `${domain + constants_1.API_GET_DATA_BY_ID}?id=${galleryId}&table=album&data=info`;
         const response = await this.requestJSON({ url, method: "GET" });
         return (0, utils_1.parseGallery)(response);
+    }
+    async getTranslatorInfo(translatorId) {
+        const domain = await store_1.GlobalStore.getDomain();
+        const url = `${domain + constants_1.API_GET_DATA_BY_ID}?id=${translatorId}&table=team&data=info`;
+        const response = await this.requestJSON({ url, method: "GET" });
+        return (0, utils_1.parseTranslator)(response);
     }
     async getGalleryList(request) {
         const domain = await store_1.GlobalStore.getDomain();
@@ -197,7 +203,7 @@ exports.API = API;
 },{"./constants":2,"./store":6,"./utils":7,"cheerio":undefined}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.USER_LIST = exports.DEFAULT_FILTERS = exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.PREF_KEYS = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.BATCH_SIZE_GET_CHAPTER_LIST = exports.Avatar = exports.Password = exports.UserName = exports.Name = exports.UserId = exports.API_GET_GALLERY_INFO = exports.API_GET_TAGS = exports.API_SEARCH = exports.API_CHAPTER_IMAGE = exports.API_CHAPTER_LIST = exports.API_HOME_ALBUM_TOP = exports.API_HOME_ALBUM_LIST = exports.API_ALBUM_SUGGEST = exports.API_GET_USER_LIST = exports.API_USER_OPERATION = exports.API_GET_USER_DATA = exports.API_LOGIN = exports.CMANGA_DOMAIN = void 0;
+exports.USER_LIST = exports.DEFAULT_FILTERS = exports.SEARCH_SORTERS = exports.HOME_PAGE_SECTIONS = exports.PREF_KEYS = exports.VERTICAL_TYPES = exports.STATUS_KEYS = exports.BATCH_SIZE_GET_CHAPTER_LIST = exports.Avatar = exports.Password = exports.UserName = exports.Name = exports.UserId = exports.API_GET_DATA_BY_ID = exports.API_GET_TAGS = exports.API_SEARCH = exports.API_CHAPTER_IMAGE = exports.API_CHAPTER_LIST = exports.API_HOME_ALBUM_TOP = exports.API_HOME_ALBUM_LIST = exports.API_ALBUM_SUGGEST = exports.API_GET_USER_LIST = exports.API_USER_OPERATION = exports.API_GET_USER_DATA = exports.API_LOGIN = exports.CMANGA_DOMAIN = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 exports.CMANGA_DOMAIN = "https://cmangam.com";
 exports.API_LOGIN = "/assets/ajax/user.php";
@@ -211,7 +217,7 @@ exports.API_CHAPTER_LIST = "/api/chapter_list";
 exports.API_CHAPTER_IMAGE = "/api/chapter_image";
 exports.API_SEARCH = "/api/search";
 exports.API_GET_TAGS = "/api/data?data=album_tags";
-exports.API_GET_GALLERY_INFO = "/api/get_data_by_id";
+exports.API_GET_DATA_BY_ID = "/api/get_data_by_id";
 exports.UserId = "user_id";
 exports.Name = "name";
 exports.UserName = "user_name";
@@ -226,6 +232,8 @@ exports.VERTICAL_TYPES = ["manhwa", "manhua", "truyện màu", "webtoon", "huy�
 exports.PREF_KEYS = {
     cache_request: "request",
     domain: "domain",
+    show_translator: "show_translator",
+    show_related_galleries: "show_related_galleries",
 };
 exports.HOME_PAGE_SECTIONS = [
     {
@@ -394,7 +402,12 @@ class Controller {
             return this.parser.getSearchResults(galleries, true);
         }
         if (tag) {
-            getGalleryList.tag = tag.tagId;
+            if (tag.propertyId == "translator") {
+                getGalleryList.team = tag.tagId;
+            }
+            else {
+                getGalleryList.tag = tag.tagId;
+            }
         }
         const galleries = await this.api.getGalleryList(getGalleryList);
         this.cache.put(constants_1.PREF_KEYS.cache_request, request);
@@ -423,6 +436,17 @@ class Controller {
         galleryInfoWithChapters.slice(1).forEach(chaptersPage => {
             chapters.push(...chaptersPage);
         });
+        const showTranslator = await store_1.GlobalStore.getShowTranslator();
+        if (showTranslator && galleryInfo.team) {
+            const [translatorInfo, relatedGalleries] = await Promise.all([
+                this.api.getTranslatorInfo(galleryInfo.team),
+                this.api.getGalleryList({
+                    team: galleryInfo.team,
+                    limit: 5
+                })
+            ]);
+            return this.parser.getContent(galleryInfo, chapters, translatorInfo, relatedGalleries);
+        }
         return this.parser.getContent(galleryInfo, chapters);
     }
     async getChapterData(chapterId) {
@@ -580,6 +604,23 @@ class Target {
                         }),
                     ],
                 },
+                {
+                    header: "Nhóm Dịch",
+                    children: [
+                        (0, daisuke_1.UIToggle)({
+                            id: constants_1.PREF_KEYS.show_translator,
+                            title: "Hiển thị nhóm dịch",
+                            value: await store_1.GlobalStore.getShowTranslator(),
+                            didChange: store_1.GlobalStore.setShowTranslator,
+                        }),
+                        (0, daisuke_1.UIToggle)({
+                            id: constants_1.PREF_KEYS.show_related_galleries,
+                            title: "Truyện cùng nhóm dịch",
+                            value: await store_1.GlobalStore.getShowRelatedGalleries(),
+                            didChange: store_1.GlobalStore.setShowRelatedGalleries,
+                        }),
+                    ],
+                },
             ],
         };
     }
@@ -616,9 +657,9 @@ class Parser {
         }
         return items;
     }
-    async getContent(gallery, chapterInfos) {
+    async getContent(gallery, chapterInfos, translatorInfo, relatedGalleries) {
         const domain = await store_1.GlobalStore.getDomain();
-        const title = gallery.name;
+        const title = (0, utils_1.startCase)(gallery.name);
         const summary = gallery.detail;
         const cover = `${domain}/assets/tmp/album/${gallery.avatar}`;
         const webUrl = `${domain}${gallery.url}`;
@@ -637,10 +678,29 @@ class Parser {
             title: "Genres",
             tags: gallery.tags.map(tag => ({ id: tag, title: (0, utils_1.startCase)(tag) })),
         });
+        if (translatorInfo) {
+            properties.push({
+                id: "translator",
+                title: "Nhóm dịch",
+                tags: [{ id: gallery.team, title: String(translatorInfo.name) }],
+            });
+        }
         const info = [
             `👁️ Lượt xem: ${(0, utils_1.numberWithDot)(gallery.statics.view)}`,
             `📚  Lượt theo dõi: ${(0, utils_1.numberWithDot)(gallery.statics.follow)}`,
+            `💬 Bình luận: ${(0, utils_1.numberWithDot)(gallery.statics.comment)}`,
         ];
+        const collections = [];
+        if (await store_1.GlobalStore.getShowRelatedGalleries() && relatedGalleries) {
+            const galleries = await this.getSearchResults(relatedGalleries);
+            if (relatedGalleries.length > 0) {
+                collections.push({
+                    id: "related_galleries",
+                    title: "Cùng nhóm dịch",
+                    highlights: galleries,
+                });
+            }
+        }
         return {
             title,
             summary,
@@ -650,7 +710,8 @@ class Parser {
             properties,
             info,
             webUrl,
-            recommendedPanelMode
+            recommendedPanelMode,
+            collections,
         };
     }
     getChapters(chapterInfos) {
@@ -711,6 +772,20 @@ class Store {
         // Test the domain against the regex
         return domainRegex.test(domain);
     }
+    async getShowTranslator() {
+        const value = await ObjectStore.boolean(constants_1.PREF_KEYS.show_translator);
+        return !!value;
+    }
+    async setShowTranslator(v) {
+        return ObjectStore.set(constants_1.PREF_KEYS.show_translator, v);
+    }
+    async getShowRelatedGalleries() {
+        const value = await ObjectStore.boolean(constants_1.PREF_KEYS.show_related_galleries);
+        return !!value;
+    }
+    async setShowRelatedGalleries(v) {
+        return ObjectStore.set(constants_1.PREF_KEYS.show_related_galleries, v);
+    }
 }
 exports.Store = Store;
 exports.GlobalStore = new Store();
@@ -718,7 +793,7 @@ exports.GlobalStore = new Store();
 },{"./constants":2}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isLoggedIn = exports.parseChapterImages = exports.parseGallery = exports.parseChapters = exports.parseGalleries = void 0;
+exports.isLoggedIn = exports.parseChapterImages = exports.parseTranslator = exports.parseGallery = exports.parseChapters = exports.parseGalleries = void 0;
 const constants_1 = require("./constants");
 function parseGalleries(galleries) {
     return galleries.map((gallery) => ({
@@ -735,6 +810,10 @@ function parseGallery(gallery) {
     return JSON.parse(String(gallery.info));
 }
 exports.parseGallery = parseGallery;
+function parseTranslator(translator) {
+    return JSON.parse(String(translator.info));
+}
+exports.parseTranslator = parseTranslator;
 function parseChapterImages(chapterImage) {
     return chapterImage.image;
 }
