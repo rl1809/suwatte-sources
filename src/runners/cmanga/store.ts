@@ -24,6 +24,24 @@ export class Store {
         // Test the domain against the regex
         return domainRegex.test(domain);
     }
+
+    async getShowTranslator(): Promise<boolean> {
+        const value = await ObjectStore.boolean(PREF_KEYS.show_translator);
+        return !!value;
+    }
+
+    async setShowTranslator(v: boolean) {
+        return ObjectStore.set(PREF_KEYS.show_translator, v);
+    }
+
+    async getShowRelatedGalleries(): Promise<boolean> {
+        const value = await ObjectStore.boolean(PREF_KEYS.show_related_galleries);
+        return !!value;
+    }
+
+    async setShowRelatedGalleries(v: boolean) {
+        return ObjectStore.set(PREF_KEYS.show_related_galleries, v);
+    }
 }
 
 export const GlobalStore = new Store();

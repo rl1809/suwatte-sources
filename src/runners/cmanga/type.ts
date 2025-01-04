@@ -1,8 +1,10 @@
 export interface GetGalleryListRequest {
     num_chapter?: number;
     sort?: string;
+    type?: string;
     hot?: number | string;
     tag?: string;
+    team?: string;
     limit?: number;
     page?: number;
     user?: number;
@@ -14,40 +16,34 @@ export interface Statics {
     follow: string;
 }
 
-export interface Info {
-    tags: string[];
-    name: string;
-    name_other: string[];
-    url: string;
-    url_other: string[];
-    source: string;
-    status: string;
-    detail: string;
-    auto_update: string;
-    hidden: number;
-    chapter: Chapter;
-    statics: Statics;
-    avatar: string;
+export interface GalleryInfo {
     id: number;
-    type: string;
+    url: string;
+    name: string;
+    tags: string[];
+    team: string;
+    avatar: string;
+    detail: string;
+    status: string;
+    chapter: {
+        id: string;
+        last: string;
+    };
+    statics: {
+        like: number;
+        view: number;
+        follow: number;
+        unlock: number;
+        comment: number;
+    };
+    name_other: string[];
 }
 
 export interface Gallery {
     id_album: string;
-    info: Info;
+    info: GalleryInfo;
     last_update: string;
     score: string;
-}
-
-export interface GalleryInfo {
-    title: string;
-    cover: string;
-    status: string;
-    views: string;
-    follows: string;
-    description: string;
-    tags: string[];
-    last_update: string;
 }
 
 export interface ChapterInfo {
@@ -92,4 +88,13 @@ export interface UserData {
     language: string;
     avatar: string;
     name: string
+}
+
+
+export interface TranslatorResponse {
+    info: string;
+}
+
+export interface TranslatorInfo {
+    name?: string;
 }

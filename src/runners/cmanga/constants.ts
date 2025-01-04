@@ -13,6 +13,7 @@ export const API_CHAPTER_LIST = "/api/chapter_list"
 export const API_CHAPTER_IMAGE = "/api/chapter_image"
 export const API_SEARCH = "/api/search"
 export const API_GET_TAGS = "/api/data?data=album_tags"
+export const API_GET_DATA_BY_ID = "/api/get_data_by_id"
 
 export const UserId = "user_id"
 export const Name = "name"
@@ -26,16 +27,18 @@ export const Avatar = "avatar"
 export const BATCH_SIZE_GET_CHAPTER_LIST = 500
 
 export const STATUS_KEYS: Record<string, PublicationStatus> = {
-    "Đang Cập Nhật": PublicationStatus.ONGOING,
-    "Hoàn Thành": PublicationStatus.COMPLETED,
+    "doing": PublicationStatus.ONGOING,
+    "completed": PublicationStatus.COMPLETED,
 };
 
-export const VERTICAL_TYPES = ["Manhwa", "Manhua", "Truyện Màu", "Webtoon", "Huyền Huyễn"];
+export const VERTICAL_TYPES = ["manhwa", "manhua", "truyện màu", "webtoon", "huyền huyễn"];
 
 
 export const PREF_KEYS = {
     cache_request: "request",
     domain: "domain",
+    show_translator: "show_translator",
+    show_related_galleries: "show_related_galleries",
 };
 
 export const HOME_PAGE_SECTIONS: PageSection[] = [

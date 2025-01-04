@@ -9,7 +9,7 @@ import {
     PageSection,
     User
 } from "@suwatte/daisuke";
-import {Avatar, DEFAULT_FILTERS, HOME_PAGE_SECTIONS, Name, PREF_KEYS, UserId} from "./constants";
+import {Avatar, DEFAULT_FILTERS, HOME_PAGE_SECTIONS, Name, Password, PREF_KEYS, UserId, UserName} from "./constants";
 import {Parser} from "./parser";
 import {API} from "./api";
 import memoryCache, {CacheClass} from "memory-cache";
@@ -37,11 +37,28 @@ export class Controller {
                     )
                     break;
                 case "update":
-                case "unique":
                     promises.push(this.api.getGalleryList(
                             {
                                 num_chapter: 0,
                                 sort: section.id,
+                                hot: 0,
+                                tag: "all",
+                                limit: 20,
+                                page: 1,
+                                user: 0,
+                                child_protect: "off"
+                            }
+                        ).then(async (galleries) => {
+                            const items = await this.parser.getSearchResults(galleries)
+                            sections.push({...section, items})
+                        })
+                    )
+                    break;
+                case "unique":
+                    promises.push(this.api.getGalleryList(
+                            {
+                                num_chapter: 0,
+                                type: section.id,
                                 hot: 0,
                                 tag: "all",
                                 limit: 20,
@@ -121,7 +138,11 @@ export class Controller {
         }
 
         if (tag) {
-            getGalleryList.tag = tag.tagId
+            if (tag.propertyId == "translator") {
+                getGalleryList.team = tag.tagId
+            } else {
+                getGalleryList.tag = tag.tagId
+            }
         }
 
         const galleries = await this.api.getGalleryList(getGalleryList)
@@ -143,8 +164,6 @@ export class Controller {
 
     // Content
     async getContent(contentId: string): Promise<Content> {
-        const domain = await GlobalStore.getDomain()
-        const webUrl = `${domain}/album/${contentId}`
         const pagePromises = [];
         pagePromises.push(this.api.getGalleryInfo(contentId))
         for (let i = 1; i <= 10; i++) {
@@ -156,7 +175,20 @@ export class Controller {
         galleryInfoWithChapters.slice(1).forEach(chaptersPage => {
             chapters.push(...<ChapterInfo[]>chaptersPage);
         });
-        return this.parser.getContent(galleryInfo, chapters, webUrl);
+        const showTranslator = await GlobalStore.getShowTranslator()
+        if (showTranslator && galleryInfo.team) {
+            const [translatorInfo, relatedGalleries] = await Promise.all([
+                this.api.getTranslatorInfo(galleryInfo.team),
+                this.api.getGalleryList(
+                    {
+                        team: galleryInfo.team,
+                        limit: 5
+                    }
+                )
+            ])
+            return this.parser.getContent(galleryInfo, chapters, translatorInfo, relatedGalleries);
+        }
+        return this.parser.getContent(galleryInfo, chapters);
     }
 
     async getChapterData(chapterId: string) {
@@ -169,7 +201,12 @@ export class Controller {
     }
 
     async handleSignOut() {
+        await SecureStore.remove(UserName)
+        await SecureStore.remove(Password)
         await SecureStore.remove(UserId)
+        await SecureStore.remove(Name)
+        await SecureStore.remove(Avatar)
+
     }
 
     async getAuthUser() {

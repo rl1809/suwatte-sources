@@ -143,7 +143,6 @@ export class Target
                         }),
                     ],
                 },
-
             ],
         };
     }

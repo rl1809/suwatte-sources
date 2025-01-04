@@ -22,6 +22,7 @@ import {
     RunnerInfo,
     RunnerPreferenceProvider,
     UITextField,
+    UIToggle,
 } from "@suwatte/daisuke";
 import {CMANGA_DOMAIN, PREF_KEYS, SEARCH_SORTERS, USER_LIST} from "./constants";
 import {Controller} from "./controller";
@@ -168,6 +169,23 @@ export class Target
                             title: "Domain name",
                             value: await GlobalStore.getDomain(),
                             didChange: GlobalStore.setDomain.bind(GlobalStore)
+                        }),
+                    ],
+                },
+                {
+                    header: "Nhóm Dịch",
+                    children: [
+                        UIToggle({
+                            id: PREF_KEYS.show_translator,
+                            title: "Hiển thị nhóm dịch",
+                            value: await GlobalStore.getShowTranslator(),
+                            didChange: GlobalStore.setShowTranslator,
+                        }),
+                        UIToggle({
+                            id: PREF_KEYS.show_related_galleries,
+                            title: "Truyện cùng nhóm dịch",
+                            value: await GlobalStore.getShowRelatedGalleries(),
+                            didChange: GlobalStore.setShowRelatedGalleries,
                         }),
                     ],
                 },

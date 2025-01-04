@@ -3,6 +3,7 @@ import {
     API_ALBUM_SUGGEST,
     API_CHAPTER_IMAGE,
     API_CHAPTER_LIST,
+    API_GET_DATA_BY_ID,
     API_GET_TAGS,
     API_GET_USER_DATA,
     API_GET_USER_LIST,
@@ -18,10 +19,19 @@ import {
     UserId,
     UserName
 } from "./constants";
-import {CheerioAPI, load} from "cheerio";
-import {parseChapterImages, parseChapters, parseGalleries} from "./utils";
+import {load} from "cheerio";
+import {parseChapterImages, parseChapters, parseGalleries, parseGallery, parseTranslator} from "./utils";
 import {GlobalStore} from "./store";
-import {ChapterImage, ChapterInfo, Gallery, GalleryInfo, Genre, GetGalleryListRequest, UserData} from "./type";
+import {
+    ChapterImage,
+    ChapterInfo,
+    Gallery,
+    GalleryInfo,
+    Genre,
+    GetGalleryListRequest,
+    TranslatorInfo,
+    UserData
+} from "./type";
 
 export class API {
     private client = new NetworkClient()
@@ -66,10 +76,19 @@ export class API {
         return this.requestJSON({url, method: "GET"});
     }
 
+
     async getGalleryInfo(galleryId: string): Promise<GalleryInfo> {
         const domain = await GlobalStore.getDomain()
-        const $ = await this.fetchHTML(`${domain}/album/${galleryId}`)
-        return getGalleryFromCheerio($)
+        const url = `${domain + API_GET_DATA_BY_ID}?id=${galleryId}&table=album&data=info`
+        const response = await this.requestJSON({url, method: "GET"});
+        return parseGallery(response)
+    }
+
+    async getTranslatorInfo(translatorId: string): Promise<TranslatorInfo> {
+        const domain = await GlobalStore.getDomain()
+        const url = `${domain + API_GET_DATA_BY_ID}?id=${translatorId}&table=team&data=info`
+        const response = await this.requestJSON({url, method: "GET"});
+        return parseTranslator(response)
     }
 
     async getGalleryList(request: GetGalleryListRequest): Promise<Gallery[]> {
@@ -226,20 +245,4 @@ export class API {
             throw ex;
         }
     }
-}
-
-async function getGalleryFromCheerio($: CheerioAPI): Promise<GalleryInfo> {
-    const domain = await GlobalStore.getDomain()
-    const title = $('p[itemprop="name"]').text().trim();
-    const cover = domain + $('img[itemprop="image"]').attr('src')
-    const tags: string[] = [];
-    $('.kind span a[itemprop="genre"]').each((_, element) => {
-        tags.push($(element).text().trim());
-    });
-    const status: string = $('.status').text().trim();
-    const views: string = $('.total_view').text().trim();
-    const follows: string = $('.bookmark').text().trim();
-    const description = $('div#book_detail').text().trim()
-    const last_update = $('.last_update').text().trim();
-    return {title, cover, status, tags, views, follows, description, last_update}
 }
