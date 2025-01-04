@@ -331,10 +331,24 @@ class Controller {
                     }));
                     break;
                 case "update":
-                case "unique":
                     promises.push(this.api.getGalleryList({
                         num_chapter: 0,
                         sort: section.id,
+                        hot: 0,
+                        tag: "all",
+                        limit: 20,
+                        page: 1,
+                        user: 0,
+                        child_protect: "off"
+                    }).then(async (galleries) => {
+                        const items = await this.parser.getSearchResults(galleries);
+                        sections.push({ ...section, items });
+                    }));
+                    break;
+                case "unique":
+                    promises.push(this.api.getGalleryList({
+                        num_chapter: 0,
+                        type: section.id,
                         hot: 0,
                         tag: "all",
                         limit: 20,
