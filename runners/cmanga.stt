@@ -678,7 +678,7 @@ class Parser {
         const title = (0, utils_1.startCase)(gallery.name);
         const summary = gallery.detail;
         const cover = `${domain}/assets/tmp/album/${gallery.avatar}`;
-        const webUrl = `${domain}${gallery.url}`;
+        const webUrl = `${domain}/${gallery.url}`;
         const status = constants_1.STATUS_KEYS[gallery.status] || daisuke_1.PublicationStatus.ONGOING;
         const chapters = this.getChapters(chapterInfos);
         const properties = [];
