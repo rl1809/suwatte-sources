@@ -42,7 +42,7 @@ export class Parser {
         const title = startCase(gallery.name)
         const summary = gallery.detail
         const cover = `${domain}/assets/tmp/album/${gallery.avatar}`
-        const webUrl = `${domain}${gallery.url}`
+        const webUrl = `${domain}/album/${gallery.url}`
         const status = STATUS_KEYS[gallery.status] || PublicationStatus.ONGOING
         const chapters = this.getChapters(chapterInfos)
         const properties: Property[] = [];

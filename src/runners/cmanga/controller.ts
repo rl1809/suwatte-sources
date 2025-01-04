@@ -15,6 +15,7 @@ import {API} from "./api";
 import memoryCache, {CacheClass} from "memory-cache";
 import {GlobalStore} from "./store";
 import {ChapterInfo, GalleryInfo, GetGalleryListRequest} from "./type";
+import {getRandomRecords} from "../../utils/utils";
 
 export class Controller {
     private api = new API()
@@ -182,11 +183,12 @@ export class Controller {
                 this.api.getGalleryList(
                     {
                         team: galleryInfo.team,
-                        limit: 5
+                        limit: 20,
+                        page: Math.floor(Math.random() * 5) + 1,
                     }
                 )
             ])
-            return this.parser.getContent(galleryInfo, chapters, translatorInfo, relatedGalleries);
+            return this.parser.getContent(galleryInfo, chapters, translatorInfo, getRandomRecords(relatedGalleries, 5));
         }
         return this.parser.getContent(galleryInfo, chapters);
     }

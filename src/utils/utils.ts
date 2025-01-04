@@ -29,6 +29,12 @@ export function startCase(str: string) {
     return capitalizedWords.join(' ');
 }
 
+export function getRandomRecords<T>(arr: T[], numRecords: number): T[] {
+    const shuffled = arr.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, numRecords);
+}
+
+
 
 
 
