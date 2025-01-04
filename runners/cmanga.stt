@@ -313,6 +313,7 @@ const parser_1 = require("./parser");
 const api_1 = require("./api");
 const memory_cache_1 = __importDefault(require("memory-cache"));
 const store_1 = require("./store");
+const utils_1 = require("../../utils/utils");
 class Controller {
     constructor() {
         this.api = new api_1.API();
@@ -456,10 +457,11 @@ class Controller {
                 this.api.getTranslatorInfo(galleryInfo.team),
                 this.api.getGalleryList({
                     team: galleryInfo.team,
-                    limit: 5
+                    limit: 20,
+                    page: Math.floor(Math.random() * 5) + 1,
                 })
             ]);
-            return this.parser.getContent(galleryInfo, chapters, translatorInfo, relatedGalleries);
+            return this.parser.getContent(galleryInfo, chapters, translatorInfo, (0, utils_1.getRandomRecords)(relatedGalleries, 5));
         }
         return this.parser.getContent(galleryInfo, chapters);
     }
@@ -500,7 +502,7 @@ class Controller {
 }
 exports.Controller = Controller;
 
-},{"./api":1,"./constants":2,"./parser":5,"./store":6,"@suwatte/daisuke":9,"memory-cache":73}],4:[function(require,module,exports){
+},{"../../utils/utils":8,"./api":1,"./constants":2,"./parser":5,"./store":6,"@suwatte/daisuke":9,"memory-cache":73}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Target = void 0;
@@ -514,7 +516,7 @@ class Target {
         this.info = {
             id: "cmanga",
             website: constants_1.CMANGA_DOMAIN,
-            version: 0.6,
+            version: 0.7,
             name: "CManga",
             supportedLanguages: ["vi-vn"],
             thumbnail: "cmanga.png",
@@ -841,7 +843,7 @@ exports.isLoggedIn = isLoggedIn;
 },{"./constants":2}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.startCase = exports.numberWithDot = exports.isNumber = void 0;
+exports.getRandomRecords = exports.startCase = exports.numberWithDot = exports.isNumber = void 0;
 function isNumber(str) {
     return /^[0-9]+$/.test(str);
 }
@@ -871,6 +873,11 @@ function startCase(str) {
     return capitalizedWords.join(' ');
 }
 exports.startCase = startCase;
+function getRandomRecords(arr, numRecords) {
+    const shuffled = arr.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, numRecords);
+}
+exports.getRandomRecords = getRandomRecords;
 
 },{}],9:[function(require,module,exports){
 "use strict";

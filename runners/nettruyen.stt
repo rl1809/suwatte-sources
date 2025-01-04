@@ -909,7 +909,7 @@ exports.isLoggedIn = isLoggedIn;
 },{"./constants":1,"./store":5}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.startCase = exports.numberWithDot = exports.isNumber = void 0;
+exports.getRandomRecords = exports.startCase = exports.numberWithDot = exports.isNumber = void 0;
 function isNumber(str) {
     return /^[0-9]+$/.test(str);
 }
@@ -939,6 +939,11 @@ function startCase(str) {
     return capitalizedWords.join(' ');
 }
 exports.startCase = startCase;
+function getRandomRecords(arr, numRecords) {
+    const shuffled = arr.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, numRecords);
+}
+exports.getRandomRecords = getRandomRecords;
 
 },{}],8:[function(require,module,exports){
 "use strict";
