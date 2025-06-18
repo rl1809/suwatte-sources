@@ -108,7 +108,7 @@ class API {
         const id = galleryId.split("-").pop() || "0";
         const url = `${domain + constants_1.API_CHAPTER_LIST}?album=${id}&page=${page}&limit=${constants_1.BATCH_SIZE_GET_CHAPTER_LIST}`;
         const response = await this.requestJSON({ url, method: "GET" });
-        return (0, utils_1.parseChapters)(response.data);
+        return (0, utils_1.parseChapters)(response);
     }
     async getChapterImages(chapterId) {
         const domain = await store_1.GlobalStore.getDomain();
