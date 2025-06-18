@@ -42,12 +42,10 @@ export class Controller {
                             {
                                 num_chapter: 0,
                                 sort: section.id,
-                                hot: 0,
-                                tag: "all",
+                                tag: "",
                                 limit: 20,
                                 page: 1,
                                 user: 0,
-                                child_protect: "off"
                             }
                         ).then(async (galleries) => {
                             const items = await this.parser.getSearchResults(galleries)
@@ -60,12 +58,10 @@ export class Controller {
                             {
                                 num_chapter: 0,
                                 type: section.id,
-                                hot: 0,
-                                tag: "all",
+                                tag: "",
                                 limit: 20,
                                 page: 1,
                                 user: 0,
-                                child_protect: "off"
                             }
                         ).then(async (galleries) => {
                             const items = await this.parser.getSearchResults(galleries)
@@ -112,7 +108,7 @@ export class Controller {
             return this.parser.getSearchResults(galleries, true)
         }
 
-        const getGalleryList: GetGalleryListRequest = {user: 0, hot: "off", child_protect: "off", limit: 20, page: page}
+        const getGalleryList: GetGalleryListRequest = {user: 0, limit: 20, page: page}
 
         if (!filters && !query && !tag && sort && sort.id) {
             request = <DirectoryRequest>this.cache.get(PREF_KEYS.cache_request) ?? request
@@ -128,8 +124,6 @@ export class Controller {
         if (filters) {
             getGalleryList.tag = filters.genre
             getGalleryList.num_chapter = Number(filters.minchapter)
-            if (filters.safe) getGalleryList.child_protect = "on";
-            if (filters.hot) getGalleryList.hot = "on"
         }
 
         if (query) {

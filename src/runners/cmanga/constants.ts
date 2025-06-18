@@ -86,16 +86,6 @@ export const DEFAULT_FILTERS: DirectoryFilter[] = [
         title: "Số chapter tối thiểu",
         type: FilterType.TEXT
     },
-    {
-        id: "hot",
-        title: "Truyện Hot",
-        type: FilterType.TOGGLE,
-    },
-    {
-        id: "safe",
-        title: "Lọc truyện 18+",
-        type: FilterType.TOGGLE,
-    },
 ];
 
 export const USER_LIST: Option[] = [

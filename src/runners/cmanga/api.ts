@@ -131,15 +131,15 @@ export class API {
     async getTopGalleryList(type: string): Promise<Gallery[]> {
         const domain = await GlobalStore.getDomain()
         const url = `${domain + API_HOME_ALBUM_TOP}?type=${type}&limit=10`
-        const galleries = await this.requestJSON({url, method: "GET"});
-        return parseGalleries(galleries)
+        const response = await this.requestJSON({url, method: "GET"});
+        return parseGalleries(response.data)
     }
 
     async getSearchGalleries(keyword: string): Promise<Gallery[]> {
         const domain = await GlobalStore.getDomain()
-        const url = `${domain + API_SEARCH}?string=${encodeURI(keyword)}`
-        const galleries = await this.requestJSON({url, method: "GET"});
-        return parseGalleries(galleries)
+        const url = `${domain + API_SEARCH}?string=${encodeURI(keyword)}&type=album`
+        const response = await this.requestJSON({url, method: "GET"});
+        return parseGalleries(response)
 
     }
 
@@ -147,8 +147,8 @@ export class API {
         const domain = await GlobalStore.getDomain()
         const id = galleryId.split("-").pop() || "0"
         const url = `${domain + API_CHAPTER_LIST}?album=${id}&page=${page}&limit=${BATCH_SIZE_GET_CHAPTER_LIST}`
-        const chapters = await this.requestJSON({url, method: "GET"});
-        return parseChapters(chapters)
+        const response = await this.requestJSON({url, method: "GET"});
+        return parseChapters(response)
 
     }
 

@@ -2,13 +2,11 @@ export interface GetGalleryListRequest {
     num_chapter?: number;
     sort?: string;
     type?: string;
-    hot?: number | string;
     tag?: string;
     team?: string;
     limit?: number;
     page?: number;
     user?: number;
-    child_protect?: string;
 }
 
 export interface Statics {
