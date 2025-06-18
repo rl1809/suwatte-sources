@@ -99,9 +99,9 @@ class API {
     }
     async getSearchGalleries(keyword) {
         const domain = await store_1.GlobalStore.getDomain();
-        const url = `${domain + constants_1.API_SEARCH}?string=${encodeURI(keyword)}`;
+        const url = `${domain + constants_1.API_SEARCH}?string=${encodeURI(keyword)}&type=album`;
         const response = await this.requestJSON({ url, method: "GET" });
-        return (0, utils_1.parseGalleries)(response.data);
+        return (0, utils_1.parseGalleries)(response);
     }
     async getChapterList(galleryId, page) {
         const domain = await store_1.GlobalStore.getDomain();
@@ -278,16 +278,6 @@ exports.DEFAULT_FILTERS = [
         title: "Số chapter tối thiểu",
         type: daisuke_1.FilterType.TEXT
     },
-    {
-        id: "hot",
-        title: "Truyện Hot",
-        type: daisuke_1.FilterType.TOGGLE,
-    },
-    {
-        id: "safe",
-        title: "Lọc truyện 18+",
-        type: daisuke_1.FilterType.TOGGLE,
-    },
 ];
 exports.USER_LIST = [
     {
@@ -402,10 +392,6 @@ class Controller {
         if (filters) {
             getGalleryList.tag = filters.genre;
             getGalleryList.num_chapter = Number(filters.minchapter);
-            if (filters.safe)
-                getGalleryList.child_protect = "on";
-            if (filters.hot)
-                getGalleryList.hot = "on";
         }
         if (query) {
             const galleries = await this.api.getSearchGalleries(query);
