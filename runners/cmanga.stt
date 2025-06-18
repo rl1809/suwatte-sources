@@ -94,21 +94,21 @@ class API {
     async getTopGalleryList(type) {
         const domain = await store_1.GlobalStore.getDomain();
         const url = `${domain + constants_1.API_HOME_ALBUM_TOP}?type=${type}&limit=10`;
-        const galleries = await this.requestJSON({ url, method: "GET" });
-        return (0, utils_1.parseGalleries)(galleries);
+        const response = await this.requestJSON({ url, method: "GET" });
+        return (0, utils_1.parseGalleries)(response.data);
     }
     async getSearchGalleries(keyword) {
         const domain = await store_1.GlobalStore.getDomain();
         const url = `${domain + constants_1.API_SEARCH}?string=${encodeURI(keyword)}`;
-        const galleries = await this.requestJSON({ url, method: "GET" });
-        return (0, utils_1.parseGalleries)(galleries);
+        const response = await this.requestJSON({ url, method: "GET" });
+        return (0, utils_1.parseGalleries)(response.data);
     }
     async getChapterList(galleryId, page) {
         const domain = await store_1.GlobalStore.getDomain();
         const id = galleryId.split("-").pop() || "0";
         const url = `${domain + constants_1.API_CHAPTER_LIST}?album=${id}&page=${page}&limit=${constants_1.BATCH_SIZE_GET_CHAPTER_LIST}`;
-        const chapters = await this.requestJSON({ url, method: "GET" });
-        return (0, utils_1.parseChapters)(chapters);
+        const response = await this.requestJSON({ url, method: "GET" });
+        return (0, utils_1.parseChapters)(response.data);
     }
     async getChapterImages(chapterId) {
         const domain = await store_1.GlobalStore.getDomain();
@@ -516,7 +516,7 @@ class Target {
         this.info = {
             id: "cmanga",
             website: constants_1.CMANGA_DOMAIN,
-            version: 0.7,
+            version: 0.8,
             name: "CManga",
             supportedLanguages: ["vi-vn"],
             thumbnail: "cmanga.png",
