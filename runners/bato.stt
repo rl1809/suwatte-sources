@@ -679,7 +679,7 @@ const constants_1 = require("./constants");
 const crypto_js_1 = require("crypto-js");
 class Parser {
     getHomepageSection($, id) {
-        const selector = id === "popular" ? "div.index-popular div.item" : "div.index-latest div.item";
+        const selector = id === "popular" ? "div.home-popular div.col.item" : "div.series-list div.col.item";
         const items = $(selector).toArray();
         return items.map((element) => this.parseHighlight($, element));
     }
