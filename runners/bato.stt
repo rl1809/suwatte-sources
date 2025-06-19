@@ -435,8 +435,7 @@ class Controller {
         this.parser = new parser_1.Parser();
     }
     async buildHomePageSections() {
-        const { data: html } = await this.client.get(this.BASE);
-        const $ = (0, cheerio_1.load)(html);
+        const $ = await this.fetchHTML(this.BASE);
         const sections = [];
         for (const section of constants_1.HOME_PAGE_SECTIONS) {
             const items = this.parser.getHomepageSection($, section.id);
@@ -576,18 +575,33 @@ class Controller {
         ];
     }
     async getContent(id) {
-        const response = await this.client.get(`${this.BASE}/series/${id}`);
-        return this.parser.parseContent(response.data, id);
+        const response = await this.fetchHTML(`${this.BASE}/series/${id}`);
+        return this.parser.parseContent(response, id);
     }
     async getChapters(id) {
-        const response = await this.client.get(`${this.BASE}/series/${id}`);
-        return this.parser.parseChapters(response.data);
+        const response = await this.fetchHTML(`${this.BASE}/series/${id}`);
+        return this.parser.parseChapters(response);
     }
     async getChapterData(chapterId) {
-        const response = await this.client.get(`${this.BASE}/chapter/${chapterId}`);
+        const response = await this.fetchHTML(`${this.BASE}/chapter/${chapterId}`);
         return {
-            pages: this.parser.parsePages(response.data),
+            pages: this.parser.parsePages(response),
         };
+    }
+    async fetchHTML(url, config) {
+        try {
+            console.log(`Requesting to the url: ${url}${config ? ", config: " + JSON.stringify(config) : ""}`);
+            const response = await this.client.get(url, config);
+            return (0, cheerio_1.load)(response.data);
+        }
+        catch (ex) {
+            const err = ex;
+            if (err?.res?.status == 404) {
+                return (0, cheerio_1.load)('');
+            }
+            console.error('Error occurred during JSON request:', err);
+            throw ex;
+        }
     }
 }
 exports.Controller = Controller;
@@ -693,8 +707,7 @@ class Parser {
         const items = $(ITEMS_SELECTOR).toArray();
         return items.map((element) => this.parseHighlight($, element));
     }
-    parseContent(html, contentId) {
-        const $ = (0, cheerio_1.load)(html);
+    parseContent($, contentId) {
         const infoElement = $("div#mainer div.container-fluid");
         const textFromInfo = (str) => {
             return $(`div.attr-item:contains(${str}) span`, infoElement)
@@ -756,7 +769,7 @@ class Parser {
                 nsfw: false,
             })),
         });
-        const chapters = this.parseChapters(html);
+        const chapters = this.parseChapters($);
         return {
             title,
             cover,
@@ -770,8 +783,7 @@ class Parser {
             webUrl: `https://bato.to/series/${contentId}`,
         };
     }
-    parseChapters(html) {
-        const $ = (0, cheerio_1.load)(html);
+    parseChapters($) {
         const listSelector = $("div.main div.p-2").toArray();
         const chapters = [];
         let index = 0;
@@ -867,8 +879,7 @@ class Parser {
             return current.subtract(value, "years").toDate();
         return current.toDate();
     }
-    parsePages(html) {
-        const $ = (0, cheerio_1.load)(html);
+    parsePages($) {
         const script = $("script:contains('const batoWord =')")?.html();
         if (!script)
             throw new Error("Could not find script with image data.");
